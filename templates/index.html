@@ -151,21 +151,228 @@
             </div>
         </div>
 
+        <!-- 风险管理面板 -->
+        <div class="row mb-3">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-shield-alt"></i> 风险管理</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="risk-metrics">
+                            <div class="text-center">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">加载中...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-exclamation-triangle"></i> 系统警告</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="system-alerts">
+                            <p class="text-muted">暂无警告</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 策略管理 -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-brain"></i> 策略管理</h5>
+                        <div class="btn-group" role="group">
+                            <button id="show-strategies" class="btn btn-outline-primary btn-sm">策略列表</button>
+                            <button id="show-backtest" class="btn btn-outline-info btn-sm">回测分析</button>
+                            <button id="show-ml" class="btn btn-outline-success btn-sm">机器学习</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <!-- 策略列表 -->
+                        <div id="strategies-panel" class="strategy-panel">
+                            <div class="table-responsive">
+                                <table class="table table-striped" id="strategies-table">
+                                    <thead>
+                                        <tr>
+                                            <th>策略名称</th>
+                                            <th>交易对</th>
+                                            <th>类型</th>
+                                            <th>持仓</th>
+                                            <th>入场价</th>
+                                            <th>状态</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td colspan="6" class="text-center">暂无策略数据</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- 回测面板 -->
+                        <div id="backtest-panel" class="strategy-panel" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <h6>回测配置</h6>
+                                    <form id="backtest-form">
+                                        <div class="mb-3">
+                                            <label class="form-label">策略类型</label>
+                                            <select class="form-select" id="backtest-strategy">
+                                                <option value="MA">移动平均线</option>
+                                                <option value="RSI">RSI策略</option>
+                                                <option value="ML">机器学习</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">交易对</label>
+                                            <select class="form-select" id="backtest-symbol">
+                                                <option value="BTCUSDT">BTC/USDT</option>
+                                                <option value="ETHUSDT">ETH/USDT</option>
+                                                <option value="BNBUSDT">BNB/USDT</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">开始日期</label>
+                                            <input type="date" class="form-control" id="backtest-start" value="2024-01-01">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">结束日期</label>
+                                            <input type="date" class="form-control" id="backtest-end" value="2024-12-31">
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">运行回测</button>
+                                        <button type="button" id="compare-strategies" class="btn btn-info">策略比较</button>
+                                    </form>
+                                </div>
+                                <div class="col-md-8">
+                                    <h6>回测结果</h6>
+                                    <div id="backtest-results">
+                                        <p class="text-muted">请运行回测以查看结果</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 机器学习面板 -->
+                        <div id="ml-panel" class="strategy-panel" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>模型训练</h6>
+                                    <form id="ml-train-form">
+                                        <div class="mb-3">
+                                            <label class="form-label">交易对</label>
+                                            <select class="form-select" id="ml-symbol">
+                                                <option value="BTCUSDT">BTC/USDT</option>
+                                                <option value="ETHUSDT">ETH/USDT</option>
+                                                <option value="BNBUSDT">BNB/USDT</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">模型类型</label>
+                                            <select class="form-select" id="ml-model-type">
+                                                <option value="random_forest">随机森林</option>
+                                                <option value="gradient_boosting">梯度提升</option>
+                                                <option value="logistic_regression">逻辑回归</option>
+                                            </select>
+                                        </div>
+                                        <button type="submit" class="btn btn-success">训练模型</button>
+                                    </form>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>训练状态</h6>
+                                    <div id="ml-training-status">
+                                        <p class="text-muted">暂未开始训练</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- 市场数据图表 -->
         <div class="row mb-3">
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
                         <h5><i class="fas fa-chart-area"></i> 市场数据</h5>
-                        <select id="symbol-select" class="form-select" style="width: 200px; display: inline-block;">
-                            <option value="BTCUSDT">BTC/USDT</option>
-                            <option value="ETHUSDT">ETH/USDT</option>
-                            <option value="BNBUSDT">BNB/USDT</option>
-                            <option value="ADAUSDT">ADA/USDT</option>
-                        </select>
+                        <div class="d-flex gap-2">
+                            <select id="symbol-select" class="form-select" style="width: 200px;">
+                                <option value="BTCUSDT">BTC/USDT</option>
+                                <option value="ETHUSDT">ETH/USDT</option>
+                                <option value="BNBUSDT">BNB/USDT</option>
+                                <option value="ADAUSDT">ADA/USDT</option>
+                            </select>
+                            <button id="show-indicators" class="btn btn-outline-secondary btn-sm">技术指标</button>
+                            <button id="show-orderbook" class="btn btn-outline-info btn-sm">订单簿</button>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div id="price-chart" style="height: 400px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 数据收集面板 -->
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-database"></i> 数据收集</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="data-collection-form">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <select class="form-select" id="collect-symbol">
+                                        <option value="BTCUSDT">BTC/USDT</option>
+                                        <option value="ETHUSDT">ETH/USDT</option>
+                                        <option value="BNBUSDT">BNB/USDT</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="number" class="form-control" id="collect-days" value="30" min="1" max="365">
+                                </div>
+                                <div class="col-md-3">
+                                    <select class="form-select" id="collect-interval">
+                                        <option value="1h">1小时</option>
+                                        <option value="4h">4小时</option>
+                                        <option value="1d">1天</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <button type="submit" class="btn btn-primary">收集</button>
+                                </div>
+                            </div>
+                        </form>
+                        <div id="collection-status" class="mt-2"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-cog"></i> 系统状态</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="system-status">
+                            <div class="text-center">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">加载中...</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

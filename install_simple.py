@@ -25,7 +25,18 @@ CORE_PACKAGES = [
     "flask-socketio",
     "sqlalchemy",
     "python-dotenv",
-    "psutil"
+    "psutil",
+    "scikit-learn",
+    "matplotlib",
+    "seaborn"
+]
+
+# 可选依赖包（高级功能）
+OPTIONAL_PACKAGES = [
+    "tensorflow",
+    "xgboost",
+    "lightgbm",
+    "talib-binary"
 ]
 
 def install_with_mirror(package, mirror):
@@ -91,16 +102,36 @@ def main():
         if not install_package(package):
             failed_packages.append(package)
     
+    # 询问是否安装可选包
+    print("\n🔧 安装可选依赖包（用于高级功能）...")
+    install_optional = input("是否安装可选依赖包？(y/N): ").lower()
+    
+    optional_failed = []
+    if install_optional == 'y':
+        print("📦 安装可选依赖包...")
+        for package in OPTIONAL_PACKAGES:
+            if not install_package(package):
+                optional_failed.append(package)
+    
     print("\n" + "=" * 40)
+    
+    # 报告安装结果
     if failed_packages:
-        print(f"❌ 安装失败的包: {', '.join(failed_packages)}")
+        print(f"❌ 核心包安装失败: {', '.join(failed_packages)}")
         print("\n💡 手动安装建议:")
         for pkg in failed_packages:
             print(f"pip install -i https://pypi.tuna.tsinghua.edu.cn/simple/ {pkg}")
     else:
-        print("🎉 所有依赖安装成功！")
-        
-        # 创建简化版的.env文件（如果不存在）
+        print("🎉 核心依赖安装成功！")
+    
+    if optional_failed:
+        print(f"\n⚠️ 可选包安装失败: {', '.join(optional_failed)}")
+        print("💡 这些包用于高级功能，不影响基本使用")
+    elif install_optional == 'y':
+        print("🎉 可选依赖也安装成功！")
+    
+    # 创建简化版的.env文件（如果不存在）
+    if not failed_packages:  # 只有核心包安装成功才创建配置文件
         if not os.path.exists('.env'):
             print("\n📝 创建示例配置文件...")
             with open('.env', 'w', encoding='utf-8') as f:

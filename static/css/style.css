@@ -134,4 +134,302 @@ body {
     100% {
         opacity: 1;
     }
+}/*
+ 新增样式 */
+
+/* 策略面板 */
+.strategy-panel {
+    min-height: 300px;
+}
+
+.btn-group .btn.active {
+    background-color: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+/* 风险指标 */
+.risk-metric {
+    text-align: center;
+    padding: 1rem;
+    border: 1px solid #eee;
+    border-radius: 0.375rem;
+    margin-bottom: 1rem;
+    background: #f8f9fa;
+}
+
+.risk-metric h6 {
+    margin-bottom: 0.5rem;
+    color: #6c757d;
+    font-size: 0.875rem;
+}
+
+.risk-metric .value {
+    font-size: 1.25rem;
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
+}
+
+/* 系统状态 */
+.status-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #eee;
+}
+
+.status-item:last-child {
+    border-bottom: none;
+}
+
+/* 警告样式 */
+.alert-sm {
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+}
+
+/* 回测结果 */
+.backtest-metric {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.25rem 0;
+    border-bottom: 1px solid #eee;
+}
+
+.backtest-metric:last-child {
+    border-bottom: none;
+}
+
+/* 表格增强 */
+.table-sm td {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+/* 数据收集状态 */
+#collection-status {
+    min-height: 30px;
+}
+
+#ml-training-status {
+    min-height: 50px;
+}
+
+/* 图表容器 */
+.chart-container {
+    position: relative;
+    height: 400px;
+    margin: 1rem 0;
+}
+
+/* 按钮组增强 */
+.btn-group-enhanced {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.btn-group-enhanced .btn {
+    flex: 1;
+    min-width: 120px;
+}
+
+/* 指标卡片 */
+.indicator-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.indicator-card h6 {
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 0.5rem;
+}
+
+.indicator-card .value {
+    font-size: 2rem;
+    font-weight: bold;
+}
+
+/* 进度条样式 */
+.progress-custom {
+    height: 8px;
+    border-radius: 4px;
+    background-color: #e9ecef;
+}
+
+.progress-custom .progress-bar {
+    border-radius: 4px;
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+/* 响应式增强 */
+@media (max-width: 992px) {
+    .btn-group-enhanced {
+        flex-direction: column;
+    }
+    
+    .btn-group-enhanced .btn {
+        min-width: auto;
+    }
+    
+    .risk-metric {
+        margin-bottom: 0.5rem;
+    }
+    
+    .indicator-card {
+        padding: 1rem;
+    }
+    
+    .indicator-card .value {
+        font-size: 1.5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .card-body {
+        padding: 0.75rem;
+    }
+    
+    .table-responsive {
+        font-size: 0.8rem;
+    }
+    
+    .btn-group {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .btn-group .btn {
+        border-radius: 0.375rem !important;
+        margin-bottom: 0.25rem;
+    }
+}
+
+/* 深色主题支持 */
+@media (prefers-color-scheme: dark) {
+    .risk-metric {
+        background: #2d3748;
+        border-color: #4a5568;
+        color: #e2e8f0;
+    }
+    
+    .risk-metric h6 {
+        color: #a0aec0;
+    }
+    
+    .status-item {
+        border-color: #4a5568;
+        color: #e2e8f0;
+    }
+    
+    .indicator-card {
+        background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+    }
+}
+
+/* 工具提示样式 */
+.tooltip-custom {
+    position: relative;
+    cursor: help;
+}
+
+.tooltip-custom:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: white;
+    padding: 0.5rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    white-space: nowrap;
+    z-index: 1000;
+}
+
+/* 加载状态 */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+
+/* 成功/错误消息 */
+.message-success {
+    color: #28a745;
+    background: #d4edda;
+    border: 1px solid #c3e6cb;
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+    margin: 0.5rem 0;
+}
+
+.message-error {
+    color: #dc3545;
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+    margin: 0.5rem 0;
+}
+
+/* 数据表格增强 */
+.data-table {
+    font-family: 'Courier New', monospace;
+}
+
+.data-table .numeric {
+    text-align: right;
+}
+
+.data-table .positive {
+    color: #28a745;
+}
+
+.data-table .negative {
+    color: #dc3545;
+}
+
+/* 图标增强 */
+.icon-lg {
+    font-size: 1.5rem;
+}
+
+.icon-success {
+    color: #28a745;
+}
+
+.icon-warning {
+    color: #ffc107;
+}
+
+.icon-danger {
+    color: #dc3545;
+}
+
+.icon-info {
+    color: #17a2b8;
 }
