@@ -106,6 +106,11 @@ class DataCollector:
             for col in numeric_columns:
                 df[col] = pd.to_numeric(df[col])
             
+            # 转换其他数值列
+            df['taker_buy_base_asset_volume'] = pd.to_numeric(df['taker_buy_base_asset_volume'])
+            df['taker_buy_quote_asset_volume'] = pd.to_numeric(df['taker_buy_quote_asset_volume'])
+            df['ignore'] = pd.to_numeric(df['ignore'])
+            
             df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
             df['number_of_trades'] = df['number_of_trades'].astype(int)
             

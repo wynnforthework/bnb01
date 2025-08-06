@@ -50,6 +50,9 @@ class ChanlunStrategy(BaseStrategy):
         # 多周期数据
         self.multi_timeframe_data = {}
         
+        # 设置最小训练样本数
+        self.min_training_samples = 50
+        
     def prepare_features(self, data: pd.DataFrame) -> pd.DataFrame:
         """准备缠论特征数据"""
         try:
@@ -368,7 +371,7 @@ class ChanlunStrategy(BaseStrategy):
             hist_area = recent_hist[recent_hist < 0].sum()
             
             # 背离判断：价格创新低但MACD绿柱面积缩小
-            if hist_area > -0.05:  # 降低绿柱面积阈值，提高敏感度
+            if hist_area > -0.08:  # 进一步降低绿柱面积阈值，提高敏感度
                 return True
             
             return False
@@ -387,7 +390,7 @@ class ChanlunStrategy(BaseStrategy):
             ma_short = df['ma_short'].iloc[i]
             
             # 检查是否站上5日均线（放宽条件）
-            if current_price < ma_short * 0.99:  # 允许1%的误差
+            if current_price < ma_short * 0.995:  # 允许0.5%的误差
                 return False
             
             # 检查是否不破前低
@@ -577,13 +580,21 @@ class ChanlunStrategy(BaseStrategy):
             # 仓位管理
             position_signal = self._manage_position(feature_data)
             
-            # 综合判断
-            if signal == 'BUY' and position_signal == 'BUY':
-                return 'BUY'
-            elif signal == 'SELL' and position_signal == 'SELL':
-                return 'SELL'
-            else:
-                return 'HOLD'
+            # 综合判断 - 修复逻辑
+            if self.position == 0:  # 无持仓时，主要看缠论信号
+                if signal == 'BUY':
+                    return 'BUY'
+                elif signal == 'SELL':
+                    return 'SELL'
+                else:
+                    return 'HOLD'
+            else:  # 有持仓时，主要看仓位管理信号
+                if position_signal == 'BUY':
+                    return 'BUY'
+                elif position_signal == 'SELL':
+                    return 'SELL'
+                else:
+                    return 'HOLD'
                 
         except Exception as e:
             self.logger.error(f"生成缠论信号失败: {e}")
@@ -671,27 +682,10 @@ class ChanlunStrategy(BaseStrategy):
             # 基础仓位
             base_position = balance * self.parameters['position_size']
             
-            # 根据买点类型调整仓位
-            if hasattr(self, 'last_signal') and self.last_signal == 'BUY':
-                if hasattr(self, 'buy_point_type'):
-                    if self.buy_point_type == 1:  # 第一类买点
-                        position_ratio = 0.3
-                    elif self.buy_point_type == 2:  # 第二类买点
-                        position_ratio = 0.4
-                    elif self.buy_point_type == 3:  # 第三类买点
-                        position_ratio = 0.5
-                    else:
-                        position_ratio = 0.3
-                else:
-                    position_ratio = 0.3
-                
-                # 趋势确认后满仓
-                if hasattr(self, 'trend_confirmed') and self.trend_confirmed:
-                    position_ratio = self.parameters['max_position']
-                
-                return (base_position * position_ratio) / current_price
-            else:
-                return 0
+            # 简化版本：直接返回基础仓位
+            position_ratio = 0.3  # 默认30%仓位
+            
+            return (base_position * position_ratio) / current_price
                 
         except Exception as e:
             self.logger.error(f"计算仓位大小失败: {e}")

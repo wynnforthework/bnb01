@@ -84,6 +84,16 @@ class MLStrategy(BaseStrategy):
                     # 确保是float类型
                     df[col] = df[col].astype(float)
             
+            # 处理其他可能的数值列 - 只处理存在的列
+            other_numeric_columns = ['quote_volume', 'trades_count', 'quote_asset_volume', 
+                                   'number_of_trades', 'taker_buy_base_asset_volume', 
+                                   'taker_buy_quote_asset_volume', 'ignore']
+            for col in other_numeric_columns:
+                if col in df.columns:
+                    if df[col].dtype == 'object':
+                        df[col] = pd.to_numeric(df[col], errors='coerce')
+                    df[col] = df[col].astype(float)
+            
             # 移除包含NaN的行
             df = df.dropna(subset=numeric_columns)
             
@@ -192,14 +202,37 @@ class MLStrategy(BaseStrategy):
             # 1: 上涨超过阈值, 0: 横盘, -1: 下跌超过阈值
             if relaxed:
                 # 使用更宽松的阈值以增加交易信号
-                up_threshold = self.parameters.get('up_threshold', 0.01) * 0.5  # 0.5%
-                down_threshold = self.parameters.get('down_threshold', -0.01) * 0.5  # -0.5%
+                up_threshold = self.parameters.get('up_threshold', 0.01) * 0.3  # 0.3%
+                down_threshold = self.parameters.get('down_threshold', -0.01) * 0.3  # -0.3%
             else:
                 up_threshold = self.parameters.get('up_threshold', 0.01)  # 1%
                 down_threshold = self.parameters.get('down_threshold', -0.01)  # -1%
             
             labels = np.where(future_returns > up_threshold, 1,
                             np.where(future_returns < down_threshold, -1, 0))
+            
+            # 检查标签分布
+            label_counts = pd.Series(labels).value_counts()
+            self.logger.info(f"标签分布: {label_counts.to_dict()}")
+            
+            # 如果分布过于不均衡，进一步调整阈值
+            if len(label_counts) >= 2:
+                min_count = min(label_counts)
+                total_count = len(labels)
+                min_ratio = min_count / total_count
+                
+                if min_ratio < 0.1:  # 如果某个类别占比少于10%
+                    self.logger.warning(f"标签分布不均衡，最小类别占比: {min_ratio:.2%}")
+                    # 使用更宽松的阈值
+                    up_threshold = up_threshold * 0.5
+                    down_threshold = down_threshold * 0.5
+                    
+                    labels = np.where(future_returns > up_threshold, 1,
+                                    np.where(future_returns < down_threshold, -1, 0))
+                    
+                    # 再次检查分布
+                    new_label_counts = pd.Series(labels).value_counts()
+                    self.logger.info(f"调整后标签分布: {new_label_counts.to_dict()}")
             
             return pd.Series(labels, index=data.index)
             
@@ -237,8 +270,19 @@ class MLStrategy(BaseStrategy):
             self.feature_columns = [col for col in feature_data.columns 
                                   if col not in ['timestamp', 'open', 'high', 'low', 'close', 'volume']]
             
+            # 确保特征列存在且有效
+            available_features = [col for col in self.feature_columns if col in feature_data.columns]
+            if not available_features:
+                self.logger.error("没有可用的特征列")
+                return False
+            
+            self.logger.info(f"可用特征列: {available_features}")
+            
+            # 更新特征列列表为实际可用的特征
+            self.feature_columns = available_features
+            
             # 准备训练数据
-            X = feature_data[self.feature_columns].fillna(0)
+            X = feature_data[available_features].fillna(0)
             y = labels
             
             # 移除无效数据
@@ -282,6 +326,20 @@ class MLStrategy(BaseStrategy):
                 y = labels[valid_idx]
                 label_counts = pd.Series(y).value_counts()
                 self.logger.info(f"调整后标签分布: {label_counts.to_dict()}")
+                
+                # 如果仍然不均衡，使用更激进的方法
+                if len(label_counts) < 2 or min(label_counts) < 3:
+                    self.logger.warning("使用更激进的阈值调整")
+                    # 使用非常宽松的阈值
+                    future_returns = feature_data['close'].shift(-self.prediction_horizon) / feature_data['close'] - 1
+                    up_threshold = 0.001  # 0.1%
+                    down_threshold = -0.001  # -0.1%
+                    
+                    labels = np.where(future_returns > up_threshold, 1,
+                                    np.where(future_returns < down_threshold, -1, 0))
+                    y = pd.Series(labels, index=feature_data.index)[valid_idx]
+                    label_counts = pd.Series(y).value_counts()
+                    self.logger.info(f"激进调整后标签分布: {label_counts.to_dict()}")
             
             # 数据标准化
             X_scaled = self.scaler.fit_transform(X_cleaned)
@@ -379,7 +437,17 @@ class MLStrategy(BaseStrategy):
             # 准备特征
             feature_data = self.prepare_features(cleaned_data)
             
-            # 获取最新数据
+            # 获取最新数据 - 使用训练时的特征列
+            if not self.feature_columns:
+                self.logger.error("特征列未定义")
+                return 0, 0.0
+            
+            # 检查所有训练时的特征列是否都存在
+            missing_features = [col for col in self.feature_columns if col not in feature_data.columns]
+            if missing_features:
+                self.logger.error(f"缺少特征列: {missing_features}")
+                return 0, 0.0
+            
             latest_features = feature_data[self.feature_columns].iloc[-1:].fillna(0)
             
             # 清理最新数据中的无穷大值
@@ -388,6 +456,11 @@ class MLStrategy(BaseStrategy):
             
             # 标准化
             latest_scaled = self.scaler.transform(latest_features)
+            
+            # 确保特征数量匹配
+            if latest_scaled.shape[1] != len(self.feature_columns):
+                self.logger.error(f"特征数量不匹配: {latest_scaled.shape[1]} vs {len(self.feature_columns)}")
+                return 0, 0.0
             
             # 预测
             prediction = self.model.predict(latest_scaled)[0]
@@ -549,6 +622,7 @@ class MLStrategy(BaseStrategy):
             # 检查数据类型
             self.logger.info(f"原始数据形状: {data.shape}")
             self.logger.info(f"原始数据类型: {data.dtypes}")
+            self.logger.info(f"原始数据列: {list(data.columns)}")
             
             # 处理可能的字符串数据
             df = data.copy()
@@ -596,15 +670,43 @@ class MLStrategy(BaseStrategy):
                     self.logger.error(f"解析嵌套数组失败: {e}")
                     return pd.DataFrame()
             
-            # 确保必要的列存在
+            # 确保必要的列存在 - 只检查核心列
             required_columns = ['open', 'high', 'low', 'close', 'volume']
             missing_columns = [col for col in required_columns if col not in df.columns]
             if missing_columns:
                 self.logger.warning(f"缺少必要的列: {missing_columns}")
-                return pd.DataFrame()
+                # 尝试从现有列中映射
+                column_mapping = {
+                    'open_price': 'open',
+                    'high_price': 'high', 
+                    'low_price': 'low',
+                    'close_price': 'close',
+                    'quote_volume': 'volume'
+                }
+                
+                for old_col, new_col in column_mapping.items():
+                    if old_col in df.columns and new_col not in df.columns:
+                        df[new_col] = df[old_col]
+                        self.logger.info(f"映射列 {old_col} -> {new_col}")
+                
+                # 再次检查必要列
+                missing_columns = [col for col in required_columns if col not in df.columns]
+                if missing_columns:
+                    self.logger.error(f"仍然缺少必要的列: {missing_columns}")
+                    return pd.DataFrame()
             
             # 转换数据类型
             for col in required_columns:
+                if col in df.columns:
+                    if df[col].dtype == 'object':
+                        df[col] = pd.to_numeric(df[col], errors='coerce')
+                    df[col] = df[col].astype(float)
+            
+            # 处理其他可能的数值列 - 只处理存在的列
+            other_numeric_columns = ['quote_volume', 'trades_count', 'quote_asset_volume', 
+                                   'number_of_trades', 'taker_buy_base_asset_volume', 
+                                   'taker_buy_quote_asset_volume', 'ignore']
+            for col in other_numeric_columns:
                 if col in df.columns:
                     if df[col].dtype == 'object':
                         df[col] = pd.to_numeric(df[col], errors='coerce')
