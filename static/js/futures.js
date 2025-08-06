@@ -707,8 +707,9 @@ setInterval(() => {
         loadFuturesAccountData();
         loadFuturesPositions();
     }
-}, 30000); // 每30秒刷新一次// 
-显示持仓详情
+}, 30000); // 每30秒刷新一次
+
+// 显示持仓详情
 async function showPositionDetails(symbol, positionSide) {
     try {
         const response = await fetch(`/api/futures/position/details?symbol=${symbol}&position_side=${positionSide}`);

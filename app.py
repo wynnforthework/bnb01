@@ -473,13 +473,27 @@ def update_futures_config():
         leverage = data.get('leverage', 10)
         symbols = data.get('symbols', ['BTCUSDT', 'ETHUSDT'])
         
-        # 保存配置到全局变量或配置文件
+        # 保存配置到全局变量和文件
         global futures_config
         futures_config = {
             'leverage': leverage,
             'symbols': symbols,
             'updated_at': datetime.now().isoformat()
         }
+        
+        # 同时保存到文件以确保持久化
+        try:
+            import os
+            import json
+            config_dir = os.path.dirname(os.path.abspath(__file__))
+            config_file = os.path.join(config_dir, 'futures_config.json')
+            
+            with open(config_file, 'w', encoding='utf-8') as f:
+                json.dump(futures_config, f, ensure_ascii=False, indent=2)
+            
+            print(f"配置已保存到文件: {config_file}")
+        except Exception as file_error:
+            print(f"保存配置文件失败: {file_error}")
         
         return jsonify({
             'success': True,
@@ -494,12 +508,32 @@ def get_futures_config():
     """获取合约交易配置"""
     try:
         global futures_config
-        if 'futures_config' not in globals():
+        
+        # 首先尝试从文件读取配置
+        try:
+            import os
+            import json
+            config_dir = os.path.dirname(os.path.abspath(__file__))
+            config_file = os.path.join(config_dir, 'futures_config.json')
+            
+            if os.path.exists(config_file):
+                with open(config_file, 'r', encoding='utf-8') as f:
+                    file_config = json.load(f)
+                    futures_config = file_config
+                    print(f"从文件加载配置: {config_file}")
+            else:
+                print("配置文件不存在，使用默认配置")
+        except Exception as file_error:
+            print(f"读取配置文件失败: {file_error}")
+        
+        # 如果全局变量不存在，使用默认配置
+        if 'futures_config' not in globals() or not futures_config:
             futures_config = {
                 'leverage': 10,
                 'symbols': ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT'],
                 'updated_at': datetime.now().isoformat()
             }
+            print("使用默认配置")
         
         return jsonify({
             'success': True,
