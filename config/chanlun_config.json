@@ -1,0 +1,66 @@
+{
+    "strategy_name": "ChanlunStrategy",
+    "display_name": "缠论01",
+    "description": "基于缠论理论的量化交易策略，包含多周期联动分析、分型识别、中枢构建、买卖点判断等功能",
+    "parameters": {
+        "timeframes": ["30m", "1h", "4h", "1d"],
+        "min_swing_length": 3,
+        "central_bank_min_bars": 3,
+        "macd_fast": 12,
+        "macd_slow": 26,
+        "macd_signal": 9,
+        "rsi_period": 14,
+        "ma_short": 5,
+        "ma_long": 20,
+        "position_size": 0.3,
+        "max_position": 1.0,
+        "stop_loss": 0.03,
+        "take_profit": 0.05,
+        "trend_confirmation": 0.02,
+        "divergence_threshold": 0.1
+    },
+    "features": {
+        "multi_timeframe_analysis": true,
+        "fractal_identification": true,
+        "stroke_building": true,
+        "segment_construction": true,
+        "central_bank_identification": true,
+        "buy_sell_points": true,
+        "divergence_detection": true,
+        "position_management": true,
+        "risk_control": true
+    },
+    "trading_rules": {
+        "buy_points": {
+            "first_class": "底背驰：股价创新低，但MACD绿柱面积缩小或快慢线背离",
+            "second_class": "不破前低且站上5日均线，次级别出现底分型确认",
+            "third_class": "次级别回调不破中枢上沿（ZG），MACD回抽0轴"
+        },
+        "sell_points": {
+            "first_class": "顶背驰：股价创新高，但MACD红柱面积缩小",
+            "second_class": "次级别二卖触发",
+            "third_class": "第三类买点失效（跌回中枢）立即离场"
+        },
+        "position_management": {
+            "initial_position": "≤30%",
+            "third_class_buy": "加仓至50%",
+            "trend_confirmation": "满仓",
+            "pyramid_trading": "盈利超5%减半仓，回调至成本价回补"
+        },
+        "risk_control": {
+            "stop_loss": "买入价下方3%",
+            "take_profit": "顶背驰或次级别二卖触发",
+            "central_bank_exit": "第三类买点失效立即离场"
+        }
+    },
+    "market_conditions": {
+        "trend_market": {
+            "strategy": "主升浪持股，仅次级别一卖减仓，一买回补"
+        },
+        "sideways_market": {
+            "strategy": "中枢震荡时高抛低吸：触及中枢上沿且MACD红柱缩量则卖出，下沿绿柱缩量则买入"
+        }
+    },
+    "enabled": true,
+    "priority": 1
+} 

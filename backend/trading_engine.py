@@ -11,6 +11,7 @@ from backend.risk_manager import RiskManager
 from strategies.ma_strategy import MovingAverageStrategy
 from strategies.rsi_strategy import RSIStrategy
 from strategies.ml_strategy import MLStrategy, LSTMStrategy
+from strategies.chanlun_strategy import ChanlunStrategy
 from config.config import Config
 
 class TradingEngine:
@@ -162,6 +163,29 @@ class TradingEngine:
                 }
             )
             self.strategies[f"{symbol}_ML"] = ml_strategy
+            
+            # 缠论策略 - 基于缠论理论的量化交易策略
+            chanlun_strategy = ChanlunStrategy(
+                symbol=symbol,
+                parameters={
+                    'timeframes': ['30m', '1h', '4h'],
+                    'min_swing_length': 3,
+                    'central_bank_min_bars': 3,
+                    'macd_fast': 12,
+                    'macd_slow': 26,
+                    'macd_signal': 9,
+                    'rsi_period': 14,
+                    'ma_short': 5,
+                    'ma_long': 20,
+                    'position_size': 0.3,
+                    'max_position': 1.0,
+                    'stop_loss': 0.03,
+                    'take_profit': 0.05,
+                    'trend_confirmation': 0.02,
+                    'divergence_threshold': 0.1
+                }
+            )
+            self.strategies[f"{symbol}_Chanlun"] = chanlun_strategy
         
         # 为扩展交易对只创建简单策略
         extended_symbols = [s for s in valid_symbols if s not in strategy_symbols]
@@ -195,6 +219,8 @@ class TradingEngine:
                 strategy = MLStrategy(symbol, parameters)
             elif strategy_type == 'LSTM':
                 strategy = LSTMStrategy(symbol, parameters)
+            elif strategy_type == 'Chanlun':
+                strategy = ChanlunStrategy(symbol, parameters)
             else:
                 self.logger.error(f"不支持的策略类型: {strategy_type}")
                 return False

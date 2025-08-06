@@ -364,13 +364,72 @@ def add_strategy():
     """添加新策略"""
     try:
         data = request.get_json()
+        symbol = data.get('symbol')
+        strategy_type = data.get('strategy_type')
+        position_size = float(data.get('position_size', 2.0)) / 100  # 转换为小数
+        stop_loss = float(data.get('stop_loss', 2.0)) / 100
+        take_profit = float(data.get('take_profit', 5.0)) / 100
         
-        # 这里应该实际创建策略，现在返回成功消息
-        return jsonify({
-            'success': True,
-            'message': '策略添加成功',
-            'strategy_id': f"strategy_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        })
+        if not symbol or not strategy_type:
+            return jsonify({'success': False, 'message': '缺少必要参数'})
+        
+        # 构建策略参数
+        parameters = {
+            'position_size': position_size,
+            'stop_loss': stop_loss,
+            'take_profit': take_profit
+        }
+        
+        # 根据策略类型添加特定参数
+        if strategy_type == 'MA':
+            parameters.update({
+                'short_window': 10,
+                'long_window': 30
+            })
+        elif strategy_type == 'RSI':
+            parameters.update({
+                'rsi_period': 14,
+                'oversold': 30,
+                'overbought': 70
+            })
+        elif strategy_type == 'ML':
+            parameters.update({
+                'model_type': 'random_forest',
+                'lookback_period': 20,
+                'prediction_horizon': 1,
+                'min_confidence': 0.6,
+                'up_threshold': 0.01,
+                'down_threshold': -0.01
+            })
+        elif strategy_type == 'Chanlun':
+            parameters.update({
+                'timeframes': ['30m', '1h', '4h'],
+                'min_swing_length': 3,
+                'central_bank_min_bars': 3,
+                'macd_fast': 12,
+                'macd_slow': 26,
+                'macd_signal': 9,
+                'rsi_period': 14,
+                'ma_short': 5,
+                'ma_long': 20,
+                'max_position': 1.0,
+                'trend_confirmation': 0.02,
+                'divergence_threshold': 0.1
+            })
+        
+        # 添加到现货交易引擎
+        if spot_trading_engine:
+            success = spot_trading_engine.add_strategy(symbol, strategy_type, parameters)
+            if success:
+                return jsonify({
+                    'success': True,
+                    'message': f'{strategy_type}策略添加成功',
+                    'strategy_id': f"{symbol}_{strategy_type}"
+                })
+            else:
+                return jsonify({'success': False, 'message': '策略添加失败'})
+        else:
+            return jsonify({'success': False, 'message': '交易引擎未初始化'})
         
     except Exception as e:
         return jsonify({'success': False, 'message': f'添加策略失败: {str(e)}'})
