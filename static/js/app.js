@@ -85,6 +85,23 @@ function bindEvents() {
             showStrategyPanel('ml');
         });
     }
+
+    // 回测表单提交
+    const backtestForm = document.getElementById('backtest-form');
+    if (backtestForm) {
+        backtestForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            runBacktest();
+        });
+    }
+    
+    // 策略比较按钮
+    const compareStrategiesBtn = document.getElementById('compare-strategies');
+    if (compareStrategiesBtn) {
+        compareStrategiesBtn.addEventListener('click', function() {
+            compareStrategies();
+        });
+    }
 }
 
 // 加载初始数据
@@ -681,4 +698,297 @@ function deleteStrategy(strategyId) {
         console.log('删除策略:', strategyId);
         // 这里可以添加删除策略的逻辑
     }
+}
+
+// 运行回测
+async function runBacktest() {
+    const strategyType = document.getElementById('backtest-strategy').value;
+    const symbol = document.getElementById('backtest-symbol').value;
+    const startDate = document.getElementById('backtest-start').value;
+    const endDate = document.getElementById('backtest-end').value;
+    
+    if (!strategyType || !symbol || !startDate || !endDate) {
+        showError('请填写完整的回测参数');
+        return;
+    }
+    
+    const resultsContainer = document.getElementById('backtest-results');
+    resultsContainer.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div><p>正在运行回测...</p></div>';
+    
+    try {
+        const response = await fetch('/api/backtest/run', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                strategy_type: strategyType,
+                symbol: symbol,
+                start_date: startDate,
+                end_date: endDate
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            displayBacktestResults(data.data, strategyType, symbol);
+        } else {
+            showError(data.message);
+            resultsContainer.innerHTML = '<p class="text-danger">回测失败</p>';
+        }
+    } catch (error) {
+        console.error('回测失败:', error);
+        showError('回测请求失败');
+        resultsContainer.innerHTML = '<p class="text-danger">回测失败</p>';
+    }
+}
+
+// 显示回测结果
+function displayBacktestResults(result, strategyType, symbol) {
+    const resultsContainer = document.getElementById('backtest-results');
+    
+    const strategyNames = {
+        'MA': '移动平均线策略',
+        'RSI': 'RSI策略',
+        'ML': '机器学习策略',
+        'Chanlun': '缠论01策略'
+    };
+    
+    const strategyName = strategyNames[strategyType] || strategyType;
+    
+    const html = `
+        <div class="card">
+            <div class="card-header">
+                <h6>${strategyName} - ${symbol} 回测结果</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>收益指标</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td>总收益率</td>
+                                <td class="${result.total_return >= 0 ? 'text-success' : 'text-danger'}">
+                                    ${(result.total_return * 100).toFixed(2)}%
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>年化收益率</td>
+                                <td class="${result.annual_return >= 0 ? 'text-success' : 'text-danger'}">
+                                    ${(result.annual_return * 100).toFixed(2)}%
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>最大回撤</td>
+                                <td class="text-danger">
+                                    ${(result.max_drawdown * 100).toFixed(2)}%
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>夏普比率</td>
+                                <td class="${result.sharpe_ratio >= 0 ? 'text-success' : 'text-danger'}">
+                                    ${result.sharpe_ratio.toFixed(2)}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>交易统计</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td>总交易次数</td>
+                                <td>${result.total_trades}</td>
+                            </tr>
+                            <tr>
+                                <td>胜率</td>
+                                <td class="${result.win_rate >= 0.5 ? 'text-success' : 'text-danger'}">
+                                    ${(result.win_rate * 100).toFixed(1)}%
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>平均交易收益</td>
+                                <td class="${result.avg_trade_return >= 0 ? 'text-success' : 'text-danger'}">
+                                    ${(result.avg_trade_return * 100).toFixed(2)}%
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>盈亏比</td>
+                                <td class="${result.profit_factor >= 1 ? 'text-success' : 'text-danger'}">
+                                    ${result.profit_factor.toFixed(2)}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <h6>最近交易记录</h6>
+                    <div class="table-responsive" style="max-height: 200px; overflow-y: auto;">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>时间</th>
+                                    <th>动作</th>
+                                    <th>价格</th>
+                                    <th>数量</th>
+                                    <th>收益</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${result.trades.map(trade => `
+                                    <tr>
+                                        <td>${new Date(trade.timestamp).toLocaleString()}</td>
+                                        <td class="${trade.action === 'BUY' ? 'text-success' : 'text-danger'}">
+                                            ${trade.action}
+                                        </td>
+                                        <td>$${trade.price.toFixed(2)}</td>
+                                        <td>${trade.quantity.toFixed(6)}</td>
+                                        <td class="${trade.profit >= 0 ? 'text-success' : 'text-danger'}">
+                                            ${trade.profit.toFixed(2)}
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    resultsContainer.innerHTML = html;
+}
+
+// 策略比较
+async function compareStrategies() {
+    const symbol = document.getElementById('backtest-symbol').value;
+    const startDate = document.getElementById('backtest-start').value;
+    const endDate = document.getElementById('backtest-end').value;
+    
+    if (!symbol || !startDate || !endDate) {
+        showError('请填写完整的回测参数');
+        return;
+    }
+    
+    const strategies = ['MA', 'RSI', 'ML', 'Chanlun'];
+    const results = [];
+    
+    const resultsContainer = document.getElementById('backtest-results');
+    resultsContainer.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div><p>正在比较策略...</p></div>';
+    
+    try {
+        for (const strategy of strategies) {
+            try {
+                const response = await fetch('/api/backtest/run', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        strategy_type: strategy,
+                        symbol: symbol,
+                        start_date: startDate,
+                        end_date: endDate
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    results.push({
+                        strategy: strategy,
+                        ...data.data
+                    });
+                }
+            } catch (error) {
+                console.error(`策略 ${strategy} 回测失败:`, error);
+            }
+        }
+        
+        displayStrategyComparison(results, symbol);
+        
+    } catch (error) {
+        console.error('策略比较失败:', error);
+        showError('策略比较失败');
+        resultsContainer.innerHTML = '<p class="text-danger">策略比较失败</p>';
+    }
+}
+
+// 显示策略比较结果
+function displayStrategyComparison(results, symbol) {
+    const resultsContainer = document.getElementById('backtest-results');
+    
+    const strategyNames = {
+        'MA': '移动平均线',
+        'RSI': 'RSI策略',
+        'ML': '机器学习',
+        'Chanlun': '缠论01'
+    };
+    
+    if (results.length === 0) {
+        resultsContainer.innerHTML = '<p class="text-danger">所有策略回测都失败了</p>';
+        return;
+    }
+    
+    // 按总收益率排序
+    results.sort((a, b) => b.total_return - a.total_return);
+    
+    const html = `
+        <div class="card">
+            <div class="card-header">
+                <h6>策略比较 - ${symbol}</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>策略</th>
+                                <th>总收益率</th>
+                                <th>年化收益率</th>
+                                <th>最大回撤</th>
+                                <th>夏普比率</th>
+                                <th>胜率</th>
+                                <th>交易次数</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${results.map(result => `
+                                <tr>
+                                    <td><strong>${strategyNames[result.strategy]}</strong></td>
+                                    <td class="${result.total_return >= 0 ? 'text-success' : 'text-danger'}">
+                                        ${(result.total_return * 100).toFixed(2)}%
+                                    </td>
+                                    <td class="${result.annual_return >= 0 ? 'text-success' : 'text-danger'}">
+                                        ${(result.annual_return * 100).toFixed(2)}%
+                                    </td>
+                                    <td class="text-danger">
+                                        ${(result.max_drawdown * 100).toFixed(2)}%
+                                    </td>
+                                    <td class="${result.sharpe_ratio >= 0 ? 'text-success' : 'text-danger'}">
+                                        ${result.sharpe_ratio.toFixed(2)}
+                                    </td>
+                                    <td class="${result.win_rate >= 0.5 ? 'text-success' : 'text-danger'}">
+                                        ${(result.win_rate * 100).toFixed(1)}%
+                                    </td>
+                                    <td>${result.total_trades}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="mt-3">
+                    <h6>最佳策略: ${strategyNames[results[0].strategy]}</h6>
+                    <p class="text-muted">
+                        总收益率: ${(results[0].total_return * 100).toFixed(2)}% | 
+                        夏普比率: ${results[0].sharpe_ratio.toFixed(2)} | 
+                        胜率: ${(results[0].win_rate * 100).toFixed(1)}%
+                    </p>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    resultsContainer.innerHTML = html;
 }

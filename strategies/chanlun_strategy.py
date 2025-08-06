@@ -368,7 +368,7 @@ class ChanlunStrategy(BaseStrategy):
             hist_area = recent_hist[recent_hist < 0].sum()
             
             # 背离判断：价格创新低但MACD绿柱面积缩小
-            if hist_area > -0.1:  # 绿柱面积较小
+            if hist_area > -0.05:  # 降低绿柱面积阈值，提高敏感度
                 return True
             
             return False
@@ -386,8 +386,8 @@ class ChanlunStrategy(BaseStrategy):
             current_price = df['close'].iloc[i]
             ma_short = df['ma_short'].iloc[i]
             
-            # 检查是否站上5日均线
-            if current_price < ma_short:
+            # 检查是否站上5日均线（放宽条件）
+            if current_price < ma_short * 0.99:  # 允许1%的误差
                 return False
             
             # 检查是否不破前低

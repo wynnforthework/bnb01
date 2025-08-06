@@ -883,6 +883,109 @@ def get_futures_strategies():
     except Exception as e:
         return jsonify({'success': False, 'message': f'获取合约策略列表失败: {str(e)}'})
 
+# 在现有API端点后添加回测API
+@app.route('/api/backtest/run', methods=['POST'])
+def run_backtest():
+    """运行回测"""
+    try:
+        data = request.get_json()
+        strategy_type = data.get('strategy_type')
+        symbol = data.get('symbol')
+        start_date = data.get('start_date')
+        end_date = data.get('end_date')
+        
+        if not all([strategy_type, symbol, start_date, end_date]):
+            return jsonify({'success': False, 'message': '缺少必要参数'})
+        
+        # 根据策略类型创建策略实例
+        if strategy_type == 'MA':
+            from strategies.ma_strategy import MovingAverageStrategy
+            strategy = MovingAverageStrategy(symbol, {
+                'short_window': 10,
+                'long_window': 30,
+                'stop_loss': 0.02,
+                'take_profit': 0.05,
+                'position_size': 0.1
+            })
+        elif strategy_type == 'RSI':
+            from strategies.rsi_strategy import RSIStrategy
+            strategy = RSIStrategy(symbol, {
+                'rsi_period': 14,
+                'oversold': 30,
+                'overbought': 70,
+                'stop_loss': 0.02,
+                'take_profit': 0.05,
+                'position_size': 0.1
+            })
+        elif strategy_type == 'ML':
+            from strategies.ml_strategy import MLStrategy
+            strategy = MLStrategy(symbol, {
+                'model_type': 'random_forest',
+                'lookback_period': 30,
+                'prediction_horizon': 1,
+                'min_confidence': 0.65,
+                'up_threshold': 0.015,
+                'down_threshold': -0.015,
+                'stop_loss': 0.03,
+                'take_profit': 0.06,
+                'position_size': 0.05
+            })
+        elif strategy_type == 'Chanlun':
+            from strategies.chanlun_strategy import ChanlunStrategy
+            strategy = ChanlunStrategy(symbol, {
+                'timeframes': ['30m', '1h', '4h'],
+                'min_swing_length': 2,
+                'central_bank_min_bars': 2,
+                'macd_fast': 12,
+                'macd_slow': 26,
+                'macd_signal': 9,
+                'rsi_period': 14,
+                'ma_short': 5,
+                'ma_long': 20,
+                'position_size': 0.2,
+                'max_position': 0.8,
+                'stop_loss': 0.04,
+                'take_profit': 0.08,
+                'trend_confirmation': 0.01,
+                'divergence_threshold': 0.05
+            })
+        else:
+            return jsonify({'success': False, 'message': f'不支持的策略类型: {strategy_type}'})
+        
+        # 运行回测
+        result = backtest_engine.run_backtest(
+            strategy=strategy,
+            symbol=symbol,
+            start_date=start_date,
+            end_date=end_date,
+            interval='1h'
+        )
+        
+        # 格式化回测结果
+        backtest_result = {
+            'total_return': result.total_return,
+            'annual_return': result.annual_return,
+            'max_drawdown': result.max_drawdown,
+            'sharpe_ratio': result.sharpe_ratio,
+            'win_rate': result.win_rate,
+            'total_trades': result.total_trades,
+            'profit_factor': result.profit_factor,
+            'avg_trade_return': result.avg_trade_return,
+            'volatility': result.volatility,
+            'calmar_ratio': result.calmar_ratio,
+            'trades': result.trades[:50],  # 只返回前50笔交易
+            'equity_curve': result.equity_curve.tolist()[-100:]  # 只返回最后100个数据点
+        }
+        
+        return jsonify({
+            'success': True,
+            'data': backtest_result,
+            'message': f'{strategy_type}策略回测完成'
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'回测失败: {str(e)}'})
+
 # 创建models目录
 import os
 if not os.path.exists('models'):

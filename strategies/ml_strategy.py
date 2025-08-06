@@ -23,11 +23,11 @@ class MLStrategy(BaseStrategy):
         self.logger = logging.getLogger(__name__)
         
         # ML参数
-        self.lookback_period = parameters.get('lookback_period', 20)
+        self.lookback_period = parameters.get('lookback_period', 30)
         self.prediction_horizon = parameters.get('prediction_horizon', 1)
         self.model_type = parameters.get('model_type', 'random_forest')
-        self.retrain_frequency = parameters.get('retrain_frequency', 100)  # 每100个数据点重训练
-        self.min_training_samples = parameters.get('min_training_samples', 200)
+        self.retrain_frequency = parameters.get('retrain_frequency', 50)  # 每50个数据点重训练
+        self.min_training_samples = parameters.get('min_training_samples', 100)
         
         self.data_count = 0
     
@@ -50,11 +50,21 @@ class MLStrategy(BaseStrategy):
                             if isinstance(item, str):
                                 # 移除引号和空格，分割
                                 clean_item = item.strip().strip("'[]").split()
-                                parsed_data.append([float(x.strip("'")) for x in clean_item])
+                                try:
+                                    parsed_data.append([float(x.strip("'")) for x in clean_item])
+                                except ValueError:
+                                    # 如果解析失败，跳过这一行
+                                    continue
                             elif isinstance(item, (list, np.ndarray)):
-                                parsed_data.append([float(x) for x in item])
+                                try:
+                                    parsed_data.append([float(x) for x in item])
+                                except (ValueError, TypeError):
+                                    continue
                             else:
-                                parsed_data.append([float(item)])
+                                try:
+                                    parsed_data.append([float(item)])
+                                except (ValueError, TypeError):
+                                    continue
                         
                         # 创建新的DataFrame
                         if parsed_data:
