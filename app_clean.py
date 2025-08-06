@@ -25,6 +25,37 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 trading_engine = None
 futures_trading_engine = None
 
+# 初始化现货交易引擎（用于策略列表显示）
+def initialize_spot_engine():
+    """初始化现货交易引擎"""
+    global trading_engine
+    if trading_engine is None:
+        try:
+            print("初始化现货交易引擎...")
+            trading_engine = TradingEngine(trading_mode='SPOT')
+            print(f"现货交易引擎初始化成功，策略数量: {len(trading_engine.strategies)}")
+        except Exception as e:
+            print(f"初始化现货交易引擎失败: {e}")
+
+# 初始化合约交易引擎（用于策略列表显示）
+def initialize_futures_engine():
+    """初始化合约交易引擎"""
+    global futures_trading_engine
+    if futures_trading_engine is None:
+        try:
+            print("初始化合约交易引擎...")
+            futures_trading_engine = TradingEngine(trading_mode='FUTURES', leverage=10)
+            print(f"合约交易引擎初始化成功，策略数量: {len(futures_trading_engine.strategies)}")
+        except Exception as e:
+            print(f"初始化合约交易引擎失败: {e}")
+
+# 在应用启动时初始化
+try:
+    initialize_spot_engine()
+    initialize_futures_engine()
+except Exception as e:
+    print(f"应用启动时初始化引擎失败: {e}")
+
 # 使用客户端管理器避免重复初始化
 from backend.client_manager import client_manager
 binance_client = client_manager.get_spot_client()
@@ -173,13 +204,26 @@ def get_futures_positions():
         positions_data = []
         
         for pos in positions:
+            # Calculate percentage if not provided by API
+            percentage = 0
+            if 'percentage' in pos:
+                percentage = float(pos['percentage'])
+            else:
+                # Calculate percentage based on entry price and mark price
+                entry_price = float(pos['entryPrice'])
+                mark_price = float(pos['markPrice'])
+                if entry_price > 0:
+                    percentage = ((mark_price - entry_price) / entry_price) * 100
+                    if float(pos['positionAmt']) < 0:  # Short position
+                        percentage = -percentage
+            
             positions_data.append({
                 'symbol': pos['symbol'],
                 'positionAmt': float(pos['positionAmt']),
                 'entryPrice': float(pos['entryPrice']),
                 'markPrice': float(pos['markPrice']),
                 'unRealizedProfit': float(pos['unRealizedProfit']),
-                'percentage': float(pos['percentage']),
+                'percentage': percentage,
                 'positionSide': pos['positionSide'],
                 'marginType': pos['marginType'],
                 'isolatedMargin': float(pos['isolatedMargin']),
@@ -235,8 +279,11 @@ def get_futures_trading_status():
     leverage = futures_trading_engine.leverage if futures_trading_engine else 10
     strategies_count = len(futures_trading_engine.strategies) if futures_trading_engine else 0
     
+    status = 'RUNNING' if is_running else 'STOPPED'
+    
     return jsonify({
         'success': True,
+        'status': status,
         'is_running': is_running,
         'leverage': leverage,
         'strategies_count': strategies_count,
@@ -366,7 +413,18 @@ def get_futures_trades():
         futures_trades = []
         
         for trade in trades:
-            if 'FUTURES' in str(trade.strategy) or hasattr(trade, 'trading_mode'):
+            # 检查是否是合约交易记录
+            # 方法1: 检查策略名称是否包含FUTURES
+            # 方法2: 检查交易记录是否有trading_mode字段
+            # 方法3: 检查是否是合约交易引擎产生的记录
+            is_futures_trade = (
+                'FUTURES' in str(trade.strategy) or 
+                hasattr(trade, 'trading_mode') or
+                '合约' in str(trade.strategy) or
+                trade.strategy in ['MovingAverageStrategy', 'RSIStrategy', 'MLStrategy']  # 这些策略在合约模式下也会使用
+            )
+            
+            if is_futures_trade:
                 futures_trades.append({
                     'id': trade.id,
                     'symbol': trade.symbol,

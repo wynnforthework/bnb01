@@ -36,29 +36,79 @@ class MLStrategy(BaseStrategy):
         try:
             df = data.copy()
             
+            # 处理可能的嵌套数组数据
+            if isinstance(df, pd.DataFrame) and len(df.columns) == 1:
+                # 如果数据是单列的嵌套数组，尝试解析
+                self.logger.warning("检测到嵌套数组数据，尝试解析...")
+                try:
+                    # 尝试将第一列解析为JSON或数组
+                    first_col = df.iloc[:, 0]
+                    if first_col.dtype == 'object':
+                        # 尝试解析为数值数组
+                        parsed_data = []
+                        for item in first_col:
+                            if isinstance(item, str):
+                                # 移除引号和空格，分割
+                                clean_item = item.strip().strip("'[]").split()
+                                parsed_data.append([float(x.strip("'")) for x in clean_item])
+                            elif isinstance(item, (list, np.ndarray)):
+                                parsed_data.append([float(x) for x in item])
+                            else:
+                                parsed_data.append([float(item)])
+                        
+                        # 创建新的DataFrame
+                        if parsed_data:
+                            df = pd.DataFrame(parsed_data, columns=['open', 'high', 'low', 'close', 'volume'])
+                            self.logger.info(f"成功解析嵌套数组数据，形状: {df.shape}")
+                except Exception as parse_error:
+                    self.logger.error(f"解析嵌套数组失败: {parse_error}")
+                    return pd.DataFrame()
+            
+            # 确保数据类型正确 - 转换字符串为数值
+            numeric_columns = ['open', 'high', 'low', 'close', 'volume']
+            for col in numeric_columns:
+                if col in df.columns:
+                    # 处理可能的字符串数据
+                    if df[col].dtype == 'object':
+                        df[col] = pd.to_numeric(df[col], errors='coerce')
+                    # 确保是float类型
+                    df[col] = df[col].astype(float)
+            
+            # 移除包含NaN的行
+            df = df.dropna(subset=numeric_columns)
+            
+            if df.empty:
+                self.logger.warning("数据清理后为空")
+                return pd.DataFrame()
+            
             # 价格特征
             df['returns'] = df['close'].pct_change()
-            df['log_returns'] = np.log(df['close'] / df['close'].shift(1))
-            df['price_change'] = (df['close'] - df['open']) / df['open']
-            df['high_low_ratio'] = (df['high'] - df['low']) / df['close']
+            # 安全处理log_returns，避免log(0)或log(负数)
+            price_ratio = df['close'] / df['close'].shift(1)
+            df['log_returns'] = np.log(price_ratio.where(price_ratio > 0, 1))
+            df['price_change'] = (df['close'] - df['open']) / df['open'].where(df['open'] != 0, 1)
+            df['high_low_ratio'] = (df['high'] - df['low']) / df['close'].where(df['close'] != 0, 1)
             df['volume_change'] = df['volume'].pct_change()
             
             # 移动平均特征
             for window in [5, 10, 20, 50]:
                 df[f'sma_{window}'] = df['close'].rolling(window=window).mean()
-                df[f'price_to_sma_{window}'] = df['close'] / df[f'sma_{window}']
+                # 安全处理除法，避免除零
+                df[f'price_to_sma_{window}'] = df['close'] / df[f'sma_{window}'].where(df[f'sma_{window}'] != 0, 1)
                 df[f'sma_{window}_slope'] = df[f'sma_{window}'].diff(5)
             
             # 波动率特征
             df['volatility_5'] = df['returns'].rolling(window=5).std()
             df['volatility_20'] = df['returns'].rolling(window=20).std()
-            df['volatility_ratio'] = df['volatility_5'] / df['volatility_20']
+            # 安全处理波动率比率
+            df['volatility_ratio'] = (df['volatility_5'] / df['volatility_20']).where(df['volatility_20'] != 0, 1)
             
             # RSI特征
             delta = df['close'].diff()
             gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
             loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-            rs = gain / loss
+            # 安全处理RSI计算
+            rs = (gain / loss).where(loss != 0, 1)
             df['rsi'] = 100 - (100 / (1 + rs))
             df['rsi_oversold'] = (df['rsi'] < 30).astype(int)
             df['rsi_overbought'] = (df['rsi'] > 70).astype(int)
@@ -77,12 +127,15 @@ class MLStrategy(BaseStrategy):
             bb_std = df['close'].rolling(window=20).std()
             df['bb_upper'] = bb_middle + (bb_std * 2)
             df['bb_lower'] = bb_middle - (bb_std * 2)
-            df['bb_position'] = (df['close'] - df['bb_lower']) / (df['bb_upper'] - df['bb_lower'])
-            df['bb_squeeze'] = (df['bb_upper'] - df['bb_lower']) / bb_middle
+            # 安全处理布林带位置计算
+            bb_range = df['bb_upper'] - df['bb_lower']
+            df['bb_position'] = (df['close'] - df['bb_lower']) / bb_range.where(bb_range != 0, 1)
+            df['bb_squeeze'] = bb_range / bb_middle.where(bb_middle != 0, 1)
             
             # 成交量特征
             df['volume_sma'] = df['volume'].rolling(window=20).mean()
-            df['volume_ratio'] = df['volume'] / df['volume_sma']
+            # 安全处理成交量比率
+            df['volume_ratio'] = df['volume'] / df['volume_sma'].where(df['volume_sma'] != 0, 1)
             df['price_volume'] = df['close'] * df['volume']
             df['volume_price_trend'] = df['price_volume'].rolling(window=5).mean()
             
@@ -108,6 +161,10 @@ class MLStrategy(BaseStrategy):
                                    np.where(df['close'] < df['close'].shift(5), -1, 0))
             df['trend_20'] = np.where(df['close'] > df['close'].shift(20), 1, 
                                     np.where(df['close'] < df['close'].shift(20), -1, 0))
+            
+            # 清理无穷大和NaN值
+            df = df.replace([np.inf, -np.inf], np.nan)
+            df = df.fillna(0)
             
             return df
             
@@ -147,8 +204,23 @@ class MLStrategy(BaseStrategy):
                 self.logger.warning(f"训练数据不足: {len(data)} < {self.min_training_samples}")
                 return False
             
+            # 数据验证和清理
+            cleaned_data = self._validate_and_clean_data(data)
+            if cleaned_data.empty:
+                self.logger.warning("数据验证后为空")
+                return False
+            
             # 准备特征
-            feature_data = self.prepare_features(data)
+            self.logger.info(f"开始准备特征，清理后数据形状: {cleaned_data.shape}")
+            
+            feature_data = self.prepare_features(cleaned_data)
+            if feature_data.empty:
+                self.logger.warning("特征准备后数据为空")
+                return False
+            
+            self.logger.info(f"特征数据形状: {feature_data.shape}")
+            self.logger.info(f"特征数据类型: {feature_data.dtypes}")
+                
             labels = self.create_labels(feature_data)
             
             # 选择特征列
@@ -168,6 +240,26 @@ class MLStrategy(BaseStrategy):
                 self.logger.warning("有效训练数据不足")
                 return False
             
+            # 清理特征数据中的无穷大和异常值
+            X_cleaned = X.copy()
+            
+            # 替换无穷大值
+            X_cleaned = X_cleaned.replace([np.inf, -np.inf], np.nan)
+            
+            # 使用中位数填充NaN值
+            X_cleaned = X_cleaned.fillna(X_cleaned.median())
+            
+            # 处理异常值 - 使用IQR方法
+            for col in X_cleaned.columns:
+                Q1 = X_cleaned[col].quantile(0.25)
+                Q3 = X_cleaned[col].quantile(0.75)
+                IQR = Q3 - Q1
+                lower_bound = Q1 - 1.5 * IQR
+                upper_bound = Q3 + 1.5 * IQR
+                
+                # 将异常值替换为边界值
+                X_cleaned[col] = X_cleaned[col].clip(lower_bound, upper_bound)
+            
             # 检查标签分布，确保有足够的多样性
             label_counts = pd.Series(y).value_counts()
             self.logger.info(f"标签分布: {label_counts.to_dict()}")
@@ -182,7 +274,7 @@ class MLStrategy(BaseStrategy):
                 self.logger.info(f"调整后标签分布: {label_counts.to_dict()}")
             
             # 数据标准化
-            X_scaled = self.scaler.fit_transform(X)
+            X_scaled = self.scaler.fit_transform(X_cleaned)
             
             # 分割训练测试集
             try:
@@ -269,11 +361,20 @@ class MLStrategy(BaseStrategy):
             if not self.is_trained or self.model is None:
                 return 0, 0.0
             
+            # 数据验证
+            cleaned_data = self._validate_and_clean_data(data)
+            if cleaned_data.empty:
+                return 0, 0.0
+            
             # 准备特征
-            feature_data = self.prepare_features(data)
+            feature_data = self.prepare_features(cleaned_data)
             
             # 获取最新数据
             latest_features = feature_data[self.feature_columns].iloc[-1:].fillna(0)
+            
+            # 清理最新数据中的无穷大值
+            latest_features = latest_features.replace([np.inf, -np.inf], np.nan)
+            latest_features = latest_features.fillna(latest_features.median())
             
             # 标准化
             latest_scaled = self.scaler.transform(latest_features)
@@ -299,26 +400,32 @@ class MLStrategy(BaseStrategy):
         try:
             self.data_count += 1
             
+            # 数据验证
+            cleaned_data = self._validate_and_clean_data(data)
+            if cleaned_data.empty:
+                self.logger.warning("数据验证失败，使用备选信号")
+                return self._generate_fallback_signal(data)
+            
             # 检查数据是否足够
-            if len(data) < self.min_training_samples:
+            if len(cleaned_data) < self.min_training_samples:
                 return 'HOLD'
             
             # 首次训练或需要重新训练
             if not self.is_trained:
                 self.logger.info("首次训练模型...")
-                success = self.train_model(data)
+                success = self.train_model(cleaned_data)
                 if not success:
                     self.logger.warning("模型训练失败，使用简化信号")
-                    return self._generate_fallback_signal(data)
+                    return self._generate_fallback_signal(cleaned_data)
             elif self.data_count % self.retrain_frequency == 0:
                 self.logger.info("重新训练模型...")
-                success = self.train_model(data)
+                success = self.train_model(cleaned_data)
                 if not success:
                     self.logger.warning("重新训练失败，继续使用现有模型")
             
             # 如果模型仍未训练，使用备选信号
             if not self.is_trained:
-                return self._generate_fallback_signal(data)
+                return self._generate_fallback_signal(cleaned_data)
             
             # 预测
             prediction, confidence = self.predict(data)
@@ -421,6 +528,98 @@ class MLStrategy(BaseStrategy):
             
         except Exception as e:
             self.logger.error(f"加载模型失败: {e}")
+
+    def _validate_and_clean_data(self, data: pd.DataFrame) -> pd.DataFrame:
+        """验证和清理数据"""
+        try:
+            if data is None or data.empty:
+                self.logger.warning("输入数据为空或None")
+                return pd.DataFrame()
+            
+            # 检查数据类型
+            self.logger.info(f"原始数据形状: {data.shape}")
+            self.logger.info(f"原始数据类型: {data.dtypes}")
+            
+            # 处理可能的字符串数据
+            df = data.copy()
+            
+            # 检查是否是嵌套数组格式
+            if len(df.columns) == 1 and df.iloc[:, 0].dtype == 'object':
+                self.logger.warning("检测到可能的嵌套数组格式")
+                try:
+                    # 尝试解析嵌套数组
+                    first_col = df.iloc[:, 0]
+                    parsed_data = []
+                    
+                    for item in first_col:
+                        if isinstance(item, str):
+                            # 处理字符串格式的数组
+                            try:
+                                # 移除所有引号和方括号
+                                clean_item = item.replace("'", "").replace("[", "").replace("]", "")
+                                # 分割并转换为数值
+                                parts = clean_item.split()
+                                row_data = [float(x) for x in parts]
+                                if len(row_data) >= 5:  # 确保有足够的数据
+                                    parsed_data.append(row_data[:5])  # 只取前5个值
+                            except (ValueError, IndexError):
+                                continue
+                        elif isinstance(item, (list, np.ndarray)):
+                            # 处理列表或数组格式
+                            try:
+                                row_data = [float(x) for x in item]
+                                if len(row_data) >= 5:
+                                    parsed_data.append(row_data[:5])
+                            except (ValueError, TypeError):
+                                continue
+                        else:
+                            continue
+                    
+                    if parsed_data:
+                        df = pd.DataFrame(parsed_data, columns=['open', 'high', 'low', 'close', 'volume'])
+                        self.logger.info(f"成功解析嵌套数组，新数据形状: {df.shape}")
+                    else:
+                        self.logger.error("无法解析嵌套数组数据")
+                        return pd.DataFrame()
+                        
+                except Exception as e:
+                    self.logger.error(f"解析嵌套数组失败: {e}")
+                    return pd.DataFrame()
+            
+            # 确保必要的列存在
+            required_columns = ['open', 'high', 'low', 'close', 'volume']
+            missing_columns = [col for col in required_columns if col not in df.columns]
+            if missing_columns:
+                self.logger.warning(f"缺少必要的列: {missing_columns}")
+                return pd.DataFrame()
+            
+            # 转换数据类型
+            for col in required_columns:
+                if col in df.columns:
+                    if df[col].dtype == 'object':
+                        df[col] = pd.to_numeric(df[col], errors='coerce')
+                    df[col] = df[col].astype(float)
+            
+            # 移除包含NaN的行
+            df = df.dropna(subset=required_columns)
+            
+            if df.empty:
+                self.logger.warning("数据清理后为空")
+                return pd.DataFrame()
+            
+            # 检查数据范围
+            for col in required_columns:
+                if df[col].min() < 0:
+                    self.logger.warning(f"{col}列包含负值，这可能不是价格数据")
+                if df[col].max() > 1e10:
+                    self.logger.warning(f"{col}列包含极大值，可能数据有误")
+            
+            self.logger.info(f"数据验证完成，最终形状: {df.shape}")
+            return df
+            
+        except Exception as e:
+            self.logger.error(f"数据验证失败: {e}")
+            return pd.DataFrame()
 
 class LSTMStrategy(BaseStrategy):
     """LSTM深度学习策略"""

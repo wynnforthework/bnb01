@@ -204,7 +204,7 @@ function displayFuturesPositions(positions) {
                 <td>$${position.entryPrice.toFixed(2)}</td>
                 <td>$${position.markPrice.toFixed(2)}</td>
                 <td class="${pnlClass}">${pnlSign}$${position.unRealizedProfit.toFixed(2)}</td>
-                <td class="${pnlClass}">${pnlSign}${position.percentage.toFixed(2)}%</td>
+                <td class="${pnlClass}">${pnlSign}${(position.percentage || 0).toFixed(2)}%</td>
                 <td>$${position.isolatedMargin.toFixed(2)}</td>
                 <td>${position.leverage}x</td>
                 <td>
@@ -756,7 +756,7 @@ async function showPositionDetails(symbol, positionSide) {
                                         <h6>盈亏信息</h6>
                                         <table class="table table-sm">
                                             <tr><td>未实现盈亏</td><td class="${position.unRealizedProfit >= 0 ? 'text-success' : 'text-danger'}">${position.unRealizedProfit >= 0 ? '+' : ''}${position.unRealizedProfit.toFixed(2)} USDT</td></tr>
-                                            <tr><td>盈亏比例</td><td class="${position.percentage >= 0 ? 'text-success' : 'text-danger'}">${position.percentage >= 0 ? '+' : ''}${position.percentage.toFixed(2)}%</td></tr>
+                                            <tr><td>盈亏比例</td><td class="${(position.percentage || 0) >= 0 ? 'text-success' : 'text-danger'}">${(position.percentage || 0) >= 0 ? '+' : ''}${(position.percentage || 0).toFixed(2)}%</td></tr>
                                             <tr><td>持仓价值</td><td>${(Math.abs(position.positionAmt) * position.markPrice).toFixed(2)} USDT</td></tr>
                                         </table>
                                     </div>
