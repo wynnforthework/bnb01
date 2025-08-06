@@ -11,14 +11,22 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container-fluid">
             <a class="navbar-brand" href="#">
-                <i class="fas fa-chart-line"></i> 量化交易系统
+                <i class="fas fa-coins"></i> 现货交易系统
             </a>
+            <div class="navbar-nav">
+                <a class="nav-link active" href="/">
+                    <i class="fas fa-coins"></i> 现货交易
+                </a>
+                <a class="nav-link" href="/futures">
+                    <i class="fas fa-chart-line"></i> 合约交易
+                </a>
+            </div>
             <div class="navbar-nav ms-auto">
                 <div class="nav-item">
-                    <span class="nav-link" id="trading-status">
+                    <span class="nav-link" id="spot-trading-status">
                         <i class="fas fa-circle text-danger"></i> 未运行
                     </span>
                 </div>
@@ -27,23 +35,43 @@
     </nav>
 
     <div class="container-fluid mt-3">
-        <!-- 控制面板 -->
+        <!-- 现货控制面板 -->
         <div class="row mb-3">
             <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
-                        <h5><i class="fas fa-cogs"></i> 控制面板</h5>
+                <div class="card border-primary">
+                    <div class="card-header bg-primary text-white">
+                        <h5><i class="fas fa-cogs"></i> 现货交易控制面板</h5>
                     </div>
                     <div class="card-body">
-                        <button id="start-trading" class="btn btn-success me-2">
-                            <i class="fas fa-play"></i> 启动交易
-                        </button>
-                        <button id="stop-trading" class="btn btn-danger me-2">
-                            <i class="fas fa-stop"></i> 停止交易
-                        </button>
-                        <button id="refresh-data" class="btn btn-info">
-                            <i class="fas fa-sync"></i> 刷新数据
-                        </button>
+                        <!-- 现货交易状态 -->
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">交易状态</label>
+                                <div>
+                                    <span id="spot-status-badge" class="badge bg-danger">未运行</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">策略数量</label>
+                                <div>
+                                    <span id="spot-strategies-count" class="badge bg-secondary">0</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 现货交易控制按钮 -->
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button id="start-spot-trading" class="btn btn-success">
+                                <i class="fas fa-play"></i> 启动现货交易
+                            </button>
+                            <button id="stop-spot-trading" class="btn btn-danger">
+                                <i class="fas fa-stop"></i> 停止现货交易
+                            </button>
+                            <button id="refresh-spot-data" class="btn btn-info">
+                                <i class="fas fa-sync"></i> 刷新数据
+                            </button>
+
+                        </div>
                     </div>
                 </div>
             </div>
@@ -452,6 +480,199 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
                     <button type="button" class="btn btn-primary" id="confirm-add-strategy">添加策略</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 手动下单模态框 -->
+    <div class="modal fade" id="manualOrderModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-hand-paper"></i> 手动下单
+                        <span id="order-mode-badge" class="badge bg-primary ms-2">现货模式</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>订单信息</h6>
+                            <form id="manual-order-form">
+                                <div class="mb-3">
+                                    <label class="form-label">交易对</label>
+                                    <select class="form-select" id="order-symbol" required>
+                                        <option value="BTCUSDT">BTC/USDT</option>
+                                        <option value="ETHUSDT">ETH/USDT</option>
+                                        <option value="BNBUSDT">BNB/USDT</option>
+                                        <option value="ADAUSDT">ADA/USDT</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">交易方向</label>
+                                    <div class="btn-group w-100" role="group">
+                                        <input type="radio" class="btn-check" name="order-side" id="buy-side" value="BUY" checked>
+                                        <label class="btn btn-outline-success" for="buy-side">
+                                            <i class="fas fa-arrow-up"></i> 买入/做多
+                                        </label>
+                                        <input type="radio" class="btn-check" name="order-side" id="sell-side" value="SELL">
+                                        <label class="btn btn-outline-danger" for="sell-side">
+                                            <i class="fas fa-arrow-down"></i> 卖出/做空
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- 合约专用选项 -->
+                                <div id="futures-options" style="display: none;">
+                                    <div class="mb-3">
+                                        <label class="form-label">持仓方向</label>
+                                        <select class="form-select" id="position-side">
+                                            <option value="LONG">做多 (LONG)</option>
+                                            <option value="SHORT">做空 (SHORT)</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">杠杆倍数</label>
+                                        <select class="form-select" id="order-leverage">
+                                            <option value="5">5x</option>
+                                            <option value="10" selected>10x</option>
+                                            <option value="20">20x</option>
+                                            <option value="50">50x</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">订单类型</label>
+                                    <select class="form-select" id="order-type">
+                                        <option value="MARKET">市价单</option>
+                                        <option value="LIMIT">限价单</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">数量</label>
+                                    <input type="number" class="form-control" id="order-quantity" 
+                                           min="0.001" step="0.001" value="0.001" required>
+                                    <div class="form-text">最小数量: 0.001</div>
+                                </div>
+
+                                <div class="mb-3" id="price-input" style="display: none;">
+                                    <label class="form-label">价格 (USDT)</label>
+                                    <input type="number" class="form-control" id="order-price" 
+                                           min="0.01" step="0.01">
+                                    <div class="form-text">限价单需要指定价格</div>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6>市场信息</h6>
+                            <div id="market-info">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-6">
+                                                <small class="text-muted">当前价格</small>
+                                                <div id="current-price" class="h5 text-primary">--</div>
+                                            </div>
+                                            <div class="col-6" id="futures-info" style="display: none;">
+                                                <small class="text-muted">标记价格</small>
+                                                <div id="mark-price" class="h6 text-info">--</div>
+                                            </div>
+                                        </div>
+                                        <div class="row mt-2" id="funding-info" style="display: none;">
+                                            <div class="col-6">
+                                                <small class="text-muted">资金费率</small>
+                                                <div id="funding-rate" class="small">--</div>
+                                            </div>
+                                            <div class="col-6">
+                                                <small class="text-muted">下次结算</small>
+                                                <div id="next-funding" class="small">--</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h6 class="mt-3">订单预览</h6>
+                            <div id="order-preview">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-6">
+                                                <small class="text-muted">预计成本</small>
+                                                <div id="estimated-cost" class="h6">$0.00</div>
+                                            </div>
+                                            <div class="col-6" id="margin-info" style="display: none;">
+                                                <small class="text-muted">所需保证金</small>
+                                                <div id="required-margin" class="h6">$0.00</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="confirm-manual-order">
+                        <i class="fas fa-paper-plane"></i> 提交订单
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 合约持仓管理模态框 -->
+    <div class="modal fade" id="futuresPositionModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-chart-line"></i> 合约持仓管理
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <h6>当前持仓</h6>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <button class="btn btn-info btn-sm" id="refresh-positions">
+                                <i class="fas fa-sync"></i> 刷新持仓
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-striped" id="futures-positions-table">
+                            <thead>
+                                <tr>
+                                    <th>交易对</th>
+                                    <th>方向</th>
+                                    <th>数量</th>
+                                    <th>入场价格</th>
+                                    <th>标记价格</th>
+                                    <th>未实现盈亏</th>
+                                    <th>盈亏比例</th>
+                                    <th>保证金</th>
+                                    <th>杠杆</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="10" class="text-center">暂无合约持仓</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>

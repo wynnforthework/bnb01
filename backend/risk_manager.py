@@ -38,7 +38,9 @@ class RiskManager:
     
     def __init__(self):
         self.db_manager = DatabaseManager()
-        self.binance_client = BinanceClient()
+        # 使用客户端管理器避免重复初始化
+        from backend.client_manager import client_manager
+        self.binance_client = client_manager.get_spot_client()
         self.logger = logging.getLogger(__name__)
         
         # 风险参数配置 - 调整为更宽松的参数以允许交易

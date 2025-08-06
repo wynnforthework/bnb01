@@ -3,7 +3,7 @@ from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 import threading
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from backend.trading_engine import TradingEngine
 from backend.binance_client import BinanceClient
@@ -24,24 +24,6 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 # 全局变量
 trading_engine = None
 futures_trading_engine = None
-
-# 初始化现货交易引擎（用于策略列表显示）
-def initialize_spot_engine():
-    """初始化现货交易引擎"""
-    global trading_engine
-    if trading_engine is None:
-        try:
-            print("初始化现货交易引擎...")
-            trading_engine = TradingEngine(trading_mode='SPOT')
-            print(f"现货交易引擎初始化成功，策略数量: {len(trading_engine.strategies)}")
-        except Exception as e:
-            print(f"初始化现货交易引擎失败: {e}")
-
-# 在应用启动时初始化
-try:
-    initialize_spot_engine()
-except Exception as e:
-    print(f"应用启动时初始化引擎失败: {e}")
 
 # 使用客户端管理器避免重复初始化
 from backend.client_manager import client_manager
@@ -104,35 +86,14 @@ def get_trades():
     """获取交易历史"""
     trades = db_manager.get_trades(limit=100)
     trade_list = []
-    
-    # 定义UTC+8时区
-    utc_plus_8 = timezone(timedelta(hours=8))
-    
     for trade in trades:
-        # 转换时间到UTC+8
-        if hasattr(trade.timestamp, 'replace'):
-            # 如果timestamp是datetime对象
-            if trade.timestamp.tzinfo is None:
-                # 假设数据库中的时间是UTC时间
-                utc_time = trade.timestamp.replace(tzinfo=timezone.utc)
-                local_time = utc_time.astimezone(utc_plus_8)
-            else:
-                local_time = trade.timestamp.astimezone(utc_plus_8)
-        else:
-            # 如果是字符串，尝试解析
-            try:
-                utc_time = datetime.fromisoformat(str(trade.timestamp).replace('Z', '+00:00'))
-                local_time = utc_time.astimezone(utc_plus_8)
-            except:
-                local_time = datetime.now(utc_plus_8)
-        
         trade_list.append({
             'id': trade.id,
             'symbol': trade.symbol,
             'side': trade.side,
             'quantity': trade.quantity,
             'price': trade.price,
-            'timestamp': local_time.strftime('%Y-%m-%d %H:%M:%S'),
+            'timestamp': trade.timestamp.isoformat(),
             'strategy': trade.strategy,
             'profit_loss': trade.profit_loss
         })
@@ -177,190 +138,6 @@ def get_trading_status():
         'success': True,
         'is_running': is_running
     })
-
-@app.route('/api/market/<symbol>')
-def get_market_data(symbol):
-    """获取市场数据"""
-    data = binance_client.get_klines(symbol=symbol, interval='1h', limit=100)
-    if data is not None and not data.empty:
-        return jsonify({
-            'success': True,
-            'data': data.to_dict('records')
-        })
-    return jsonify({'success': False, 'message': '获取市场数据失败'})
-
-@app.route('/api/risk/portfolio')
-def get_portfolio_risk():
-    """获取投资组合风险指标"""
-    try:
-        # 简化的风险指标，避免复杂计算导致的错误
-        return jsonify({
-            'success': True,
-            'data': {
-                'total_exposure': 15.5,  # 总风险敞口百分比
-                'max_drawdown': 3.2,     # 最大回撤百分比
-                'sharpe_ratio': 1.8,     # 夏普比率
-                'risk_level': '中等',     # 风险评级
-                'portfolio_value': 10000.0,
-                'daily_pnl': 150.0,
-                'volatility': 12.5
-            }
-        })
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'获取风险指标失败: {str(e)}'})
-
-@app.route('/api/alerts')
-def get_alerts():
-    """获取风险警告和系统提醒"""
-    try:
-        alerts = []
-        
-        # 获取风险警告
-        portfolio_risk = risk_manager.calculate_portfolio_risk()
-        position_risks = risk_manager.get_position_risks()
-        
-        warnings = risk_manager._generate_risk_warnings(portfolio_risk, position_risks)
-        
-        for warning in warnings:
-            alerts.append({
-                'type': 'risk',
-                'level': 'warning',
-                'message': warning,
-                'timestamp': datetime.now().isoformat()
-            })
-        
-        # 检查系统状态
-        global trading_engine
-        if trading_engine and not trading_engine.is_running:
-            alerts.append({
-                'type': 'system',
-                'level': 'info',
-                'message': '交易引擎未运行',
-                'timestamp': datetime.now().isoformat()
-            })
-        
-        return jsonify({
-            'success': True,
-            'alerts': alerts
-        })
-        
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'获取警告失败: {str(e)}'})
-
-@app.route('/api/system/status')
-def get_system_status():
-    """获取系统状态"""
-    try:
-        global trading_engine, futures_trading_engine
-        
-        # 计算运行时间
-        uptime_hours = 2.5  # 简化的运行时间
-        
-        # 模拟内存使用率
-        try:
-            import psutil
-            memory_usage = psutil.virtual_memory().percent
-        except ImportError:
-            memory_usage = 45.2  # 默认值，如果psutil未安装
-        
-        status_data = {
-            'api_connected': True,
-            'database_connected': True,
-            'memory_usage': memory_usage,
-            'uptime': f'{uptime_hours:.1f}h',
-            'trading_engine_running': trading_engine.is_running if trading_engine else False,
-            'futures_engine_running': futures_trading_engine.is_running if futures_trading_engine else False,
-            'strategies_count': len(trading_engine.strategies) if trading_engine else 0
-        }
-        
-        return jsonify({
-            'success': True,
-            'data': status_data
-        })
-        
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'获取系统状态失败: {str(e)}'})
-
-# ========== 现货策略管理API端点 ==========
-
-@app.route('/api/strategies/list')
-def get_strategies():
-    """获取现货策略列表"""
-    try:
-        global trading_engine
-        
-        strategies = []
-        
-        # 优先使用全局交易引擎
-        engine_to_use = trading_engine
-        is_running = False
-        
-        # 如果全局引擎不存在或没有策略，返回预定义的策略列表
-        if not engine_to_use or not hasattr(engine_to_use, 'strategies') or not engine_to_use.strategies:
-            print("全局交易引擎未初始化，返回预定义策略列表")
-            
-            # 返回预定义的策略列表，避免创建引擎时的网络超时
-            default_symbols = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT', 'DOGEUSDT', 'SOLUSDT', 'DOTUSDT', 'AVAXUSDT', 'LINKUSDT', 'LTCUSDT']
-            strategy_types = ['MA', 'RSI', 'ML']
-            
-            for symbol in default_symbols:
-                for strategy_type in strategy_types:
-                    strategy_info = {
-                        'id': f"{symbol}_{strategy_type}",
-                        'name': f"{symbol} - {strategy_type}Strategy",
-                        'symbol': symbol,
-                        'type': f"{strategy_type}Strategy",
-                        'status': 'inactive',
-                        'position': 0.0,
-                        'entry_price': 0.0,
-                        'pnl': 0.0
-                    }
-                    strategies.append(strategy_info)
-        else:
-            is_running = engine_to_use.is_running
-            
-            # 获取策略列表
-            for strategy_key, strategy in engine_to_use.strategies.items():
-                try:
-                    strategy_info = {
-                        'id': str(strategy_key),
-                        'name': f"{strategy.symbol} - {strategy.__class__.__name__}",
-                        'symbol': str(strategy.symbol),
-                        'type': str(strategy.__class__.__name__),
-                        'status': 'active' if is_running else 'inactive',
-                        'position': float(getattr(strategy, 'position', 0)),
-                        'entry_price': float(getattr(strategy, 'entry_price', 0)),
-                        'pnl': float(getattr(strategy, 'unrealized_pnl', 0))
-                    }
-                    strategies.append(strategy_info)
-                except Exception as strategy_error:
-                    print(f"处理策略 {strategy_key} 时出错: {strategy_error}")
-                    continue
-        
-        return jsonify({
-            'success': True,
-            'data': strategies
-        })
-        
-    except Exception as e:
-        print(f"获取策略列表异常: {e}")
-        return jsonify({'success': False, 'message': f'获取策略列表失败: {str(e)}'})
-
-@app.route('/api/strategies/add', methods=['POST'])
-def add_strategy():
-    """添加新策略"""
-    try:
-        data = request.get_json()
-        
-        # 这里应该实际创建策略，现在返回成功消息
-        return jsonify({
-            'success': True,
-            'message': '策略添加成功',
-            'strategy_id': f"strategy_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        })
-        
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'添加策略失败: {str(e)}'})
 
 # ========== 合约交易API端点 ==========
 
@@ -416,112 +193,14 @@ def get_futures_positions():
     except Exception as e:
         return jsonify({'success': False, 'message': f'获取合约持仓失败: {str(e)}'})
 
-@app.route('/api/futures/position/details')
-def get_futures_position_details():
-    """获取合约持仓详情"""
-    try:
-        symbol = request.args.get('symbol')
-        position_side = request.args.get('position_side', 'BOTH')
-        
-        if not symbol:
-            return jsonify({'success': False, 'message': '缺少交易对参数'})
-        
-        # 获取所有持仓
-        positions = futures_client.get_positions()
-        
-        # 查找指定的持仓
-        target_position = None
-        for pos in positions:
-            if pos['symbol'] == symbol and (position_side == 'BOTH' or pos['positionSide'] == position_side):
-                if float(pos['positionAmt']) != 0:  # 只返回有持仓的
-                    target_position = pos
-                    break
-        
-        if not target_position:
-            return jsonify({'success': False, 'message': '未找到指定持仓'})
-        
-        # 格式化持仓详情
-        position_details = {
-            'symbol': target_position['symbol'],
-            'positionAmt': float(target_position['positionAmt']),
-            'entryPrice': float(target_position['entryPrice']),
-            'markPrice': float(target_position['markPrice']),
-            'unRealizedProfit': float(target_position['unRealizedProfit']),
-            'percentage': float(target_position['percentage']),
-            'positionSide': target_position['positionSide'],
-            'marginType': target_position['marginType'],
-            'isolatedMargin': float(target_position['isolatedMargin']),
-            'leverage': target_position['leverage'],
-            'liquidationPrice': float(target_position.get('liquidationPrice', 0)),
-            'initialMargin': float(target_position.get('initialMargin', 0)),
-            'maintMargin': float(target_position.get('maintMargin', 0))
-        }
-        
-        return jsonify({
-            'success': True,
-            'position': position_details
-        })
-        
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'获取持仓详情失败: {str(e)}'})
-
-@app.route('/api/futures/config/update', methods=['POST'])
-def update_futures_config():
-    """更新合约交易配置"""
+@app.route('/api/futures/trading/start', methods=['POST'])
+def start_futures_trading():
+    """启动合约交易"""
+    global futures_trading_engine
     try:
         data = request.get_json()
         leverage = data.get('leverage', 10)
         symbols = data.get('symbols', ['BTCUSDT', 'ETHUSDT'])
-        
-        # 保存配置到全局变量或配置文件
-        global futures_config
-        futures_config = {
-            'leverage': leverage,
-            'symbols': symbols,
-            'updated_at': datetime.now().isoformat()
-        }
-        
-        return jsonify({
-            'success': True,
-            'message': f'合约配置已更新：杠杆 {leverage}x，币种 {len(symbols)} 个',
-            'config': futures_config
-        })
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'更新配置失败: {str(e)}'})
-
-@app.route('/api/futures/config/get')
-def get_futures_config():
-    """获取合约交易配置"""
-    try:
-        global futures_config
-        if 'futures_config' not in globals():
-            futures_config = {
-                'leverage': 10,
-                'symbols': ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT'],
-                'updated_at': datetime.now().isoformat()
-            }
-        
-        return jsonify({
-            'success': True,
-            'config': futures_config
-        })
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'获取配置失败: {str(e)}'})
-
-@app.route('/api/futures/trading/start', methods=['POST'])
-def start_futures_trading():
-    """启动合约交易"""
-    global futures_trading_engine, futures_config
-    try:
-        data = request.get_json()
-        
-        # 使用保存的配置或请求中的配置
-        if 'futures_config' in globals():
-            leverage = futures_config.get('leverage', data.get('leverage', 10))
-            symbols = futures_config.get('symbols', data.get('symbols', ['BTCUSDT', 'ETHUSDT']))
-        else:
-            leverage = data.get('leverage', 10)
-            symbols = data.get('symbols', ['BTCUSDT', 'ETHUSDT'])
         
         if futures_trading_engine is None:
             futures_trading_engine = TradingEngine(trading_mode='FUTURES', leverage=leverage)

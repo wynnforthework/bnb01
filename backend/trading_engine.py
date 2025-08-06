@@ -14,24 +14,70 @@ from strategies.ml_strategy import MLStrategy, LSTMStrategy
 from config.config import Config
 
 class TradingEngine:
-    """增强版交易引擎"""
+    """增强版交易引擎 - 支持现货和合约交易"""
     
-    def __init__(self):
+    def __init__(self, trading_mode='SPOT', leverage=10):
+        """
+        初始化交易引擎
+        
+        Args:
+            trading_mode: 'SPOT' 现货交易, 'FUTURES' 合约交易
+            leverage: 合约交易杠杆倍数 (仅合约模式有效)
+        """
         self.config = Config()
-        self.binance_client = BinanceClient()
+        self.trading_mode = trading_mode.upper()
+        self.leverage = leverage
+        
+        # 使用客户端管理器避免重复初始化
+        from backend.client_manager import client_manager
+        self.binance_client = client_manager.get_client(self.trading_mode)
         self.db_manager = DatabaseManager()
         self.data_collector = DataCollector()
         self.risk_manager = RiskManager()
+        
         self.strategies = {}
         self.is_running = False
         self.data_collection_running = False
         self.logger = logging.getLogger(__name__)
+        
+        self.logger.info(f"交易引擎初始化完成，模式: {self.trading_mode}")
+        if self.trading_mode == 'FUTURES':
+            self.logger.info(f"合约杠杆: {self.leverage}x")
+            # 初始化合约设置
+            self._initialize_futures_settings()
         
         # 初始化策略
         self._initialize_strategies()
         
         # 启动数据收集
         self._start_data_collection()
+    
+    def _initialize_futures_settings(self):
+        """初始化合约交易设置"""
+        try:
+            # 设置持仓模式为双向持仓
+            self.binance_client.set_position_mode(dual_side_position=True)
+            
+            # 为主要交易对设置杠杆和保证金模式
+            main_symbols = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT']
+            
+            for symbol in main_symbols:
+                try:
+                    # 设置保证金模式为逐仓
+                    self.binance_client.set_margin_type(symbol, 'ISOLATED')
+                    
+                    # 设置杠杆
+                    self.binance_client.set_leverage(symbol, self.leverage)
+                    
+                    self.logger.info(f"合约设置完成 {symbol}: {self.leverage}x 逐仓")
+                    
+                except Exception as e:
+                    self.logger.warning(f"设置合约参数失败 {symbol}: {e}")
+            
+            self.logger.info("合约交易设置初始化完成")
+            
+        except Exception as e:
+            self.logger.error(f"初始化合约设置失败: {e}")
     
     def _initialize_strategies(self):
         """初始化交易策略"""
@@ -62,10 +108,15 @@ class TradingEngine:
             self.logger.error("没有找到有效的交易对，使用默认配置")
             valid_symbols = ['BTCUSDT', 'ETHUSDT']  # 最基本的交易对
         
-        # 只为主要交易对创建所有策略
-        main_symbols = [s for s in self.config.DEFAULT_SYMBOLS if s in valid_symbols]
+        # 为所有有效的交易对创建策略（现货模式）
+        if self.trading_mode == 'SPOT':
+            # 现货交易：为所有有效交易对创建策略
+            strategy_symbols = valid_symbols
+        else:
+            # 合约交易：只为主要交易对创建策略（避免资源消耗过大）
+            strategy_symbols = [s for s in self.config.DEFAULT_SYMBOLS if s in valid_symbols]
         
-        for symbol in main_symbols:
+        for symbol in strategy_symbols:
             # MA策略 - 使用更敏感的参数
             ma_strategy = MovingAverageStrategy(
                 symbol=symbol,
@@ -113,7 +164,7 @@ class TradingEngine:
             self.strategies[f"{symbol}_ML"] = ml_strategy
         
         # 为扩展交易对只创建简单策略
-        extended_symbols = [s for s in valid_symbols if s not in main_symbols]
+        extended_symbols = [s for s in valid_symbols if s not in strategy_symbols]
         for symbol in extended_symbols:
             # 只创建MA策略（资源消耗较小）
             ma_strategy = MovingAverageStrategy(
@@ -388,11 +439,21 @@ class TradingEngine:
                         self.logger.warning(f"交易前风险检查失败: {message}")
                         return
                     
-                    order = self.binance_client.place_order(
-                        symbol=strategy.symbol,
-                        side='BUY',
-                        quantity=quantity
-                    )
+                    # 根据交易模式执行订单
+                    if self.trading_mode == 'FUTURES':
+                        order = self.binance_client.place_order(
+                            symbol=strategy.symbol,
+                            side='BUY',
+                            quantity=quantity,
+                            leverage=self.leverage,
+                            position_side='LONG'
+                        )
+                    else:
+                        order = self.binance_client.place_order(
+                            symbol=strategy.symbol,
+                            side='BUY',
+                            quantity=quantity
+                        )
                     
                     if order:
                         strategy.update_position('BUY', quantity, price)
@@ -423,18 +484,34 @@ class TradingEngine:
                             strategy=strategy.__class__.__name__
                         )
                         
-                        self.logger.info(f"买入 {strategy.symbol}: {quantity:.6f} @ ${price:.4f}")
+                        trade_type = "合约做多" if self.trading_mode == 'FUTURES' else "现货买入"
+                        self.logger.info(f"{trade_type} {strategy.symbol}: {quantity:.6f} @ ${price:.4f}")
+                        if self.trading_mode == 'FUTURES':
+                            self.logger.info(f"  杠杆: {self.leverage}x")
                         self.logger.info(f"  止损: ${stop_loss:.4f}, 止盈: ${take_profit:.4f}")
                         self.logger.info(f"  持仓已更新到数据库")
             
             elif action == 'SELL' and strategy.position >= 0:
                 if strategy.position > 0:
                     quantity = strategy.position
-                    order = self.binance_client.place_order(
-                        symbol=strategy.symbol,
-                        side='SELL',
-                        quantity=quantity
-                    )
+                    
+                    # 根据交易模式执行订单
+                    if self.trading_mode == 'FUTURES':
+                        # 合约模式：可以开空仓或平多仓
+                        order = self.binance_client.place_order(
+                            symbol=strategy.symbol,
+                            side='SELL',
+                            quantity=quantity,
+                            position_side='LONG',
+                            reduce_only=True  # 平仓操作
+                        )
+                    else:
+                        # 现货模式：卖出持仓
+                        order = self.binance_client.place_order(
+                            symbol=strategy.symbol,
+                            side='SELL',
+                            quantity=quantity
+                        )
                     
                     if order:
                         profit_loss = (price - strategy.entry_price) * quantity
@@ -456,7 +533,8 @@ class TradingEngine:
                             profit_loss=profit_loss
                         )
                         
-                        self.logger.info(f"卖出 {strategy.symbol}: {quantity:.6f} @ ${price:.4f}, P&L: ${profit_loss:.2f}")
+                        trade_type = "合约平多" if self.trading_mode == 'FUTURES' else "现货卖出"
+                        self.logger.info(f"{trade_type} {strategy.symbol}: {quantity:.6f} @ ${price:.4f}, P&L: ${profit_loss:.2f}")
                         self.logger.info(f"  持仓已从数据库移除")
             
             elif action == 'CLOSE':
@@ -489,7 +567,18 @@ class TradingEngine:
             self.logger.error(f"执行增强交易失败: {e}")
     
     def _execute_trade(self, strategy, action, price, reason):
-        """执行交易"""
+        """执行交易（支持现货和合约）"""
+        try:
+            if self.trading_mode == 'FUTURES':
+                return self._execute_futures_trade(strategy, action, price, reason)
+            else:
+                return self._execute_spot_trade(strategy, action, price, reason)
+        except Exception as e:
+            self.logger.error(f"执行交易失败: {e}")
+            return False
+    
+    def _execute_spot_trade(self, strategy, action, price, reason):
+        """执行现货交易"""
         try:
             balance = self.binance_client.get_balance('USDT')
             
@@ -502,7 +591,8 @@ class TradingEngine:
                         quantity=quantity
                     )
                     if order:
-                        strategy.update_position('BUY', quantity, price)
+                        strategy.position = quantity
+                        strategy.entry_price = price
                         self.db_manager.add_trade(
                             symbol=strategy.symbol,
                             side='BUY',
@@ -510,53 +600,172 @@ class TradingEngine:
                             price=price,
                             strategy=strategy.__class__.__name__
                         )
-                        self.logger.info(f"买入 {strategy.symbol}: {quantity} @ {price}")
+                        self.logger.info(f"现货买入 {strategy.symbol}: {quantity} @ {price}")
+                        return True
             
-            elif action == 'SELL' and strategy.position >= 0:
-                if strategy.position > 0:
-                    quantity = strategy.position
+            elif action == 'SELL' and strategy.position > 0:
+                quantity = strategy.position
+                order = self.binance_client.place_order(
+                    symbol=strategy.symbol,
+                    side='SELL',
+                    quantity=quantity
+                )
+                if order:
+                    profit_loss = (price - strategy.entry_price) * quantity
+                    strategy.position = 0
+                    strategy.entry_price = 0
+                    self.db_manager.add_trade(
+                        symbol=strategy.symbol,
+                        side='SELL',
+                        quantity=quantity,
+                        price=price,
+                        strategy=strategy.__class__.__name__,
+                        profit_loss=profit_loss
+                    )
+                    self.logger.info(f"现货卖出 {strategy.symbol}: {quantity} @ {price}, P&L: {profit_loss}")
+                    return True
+            
+            return False
+            
+        except Exception as e:
+            self.logger.error(f"执行现货交易失败: {e}")
+            return False
+    
+    def _execute_futures_trade(self, strategy, action, price, reason):
+        """执行合约交易（支持做多和做空）"""
+        try:
+            account_balance = self.binance_client.get_account_balance()
+            available_balance = float(account_balance['availableBalance'])
+            
+            # 计算仓位大小
+            position_value = available_balance * strategy.parameters.get('position_size', 0.02)
+            quantity = position_value * self.leverage / price  # 考虑杠杆
+            
+            # 最小交易量检查
+            if quantity < 0.001:  # 根据交易对调整最小量
+                self.logger.warning(f"交易量太小: {quantity}, 跳过交易")
+                return False
+            
+            if action == 'BUY':
+                # 开多头仓位或平空头仓位
+                if strategy.position <= 0:  # 无仓位或有空头仓位
+                    # 如果有空头仓位，先平仓
+                    if strategy.position < 0:
+                        close_quantity = abs(strategy.position)
+                        close_order = self.binance_client.place_order(
+                            symbol=strategy.symbol,
+                            side='BUY',
+                            quantity=close_quantity,
+                            position_side='SHORT',
+                            reduce_only=True
+                        )
+                        if close_order:
+                            self.logger.info(f"平空头仓位 {strategy.symbol}: {close_quantity}")
+                            strategy.position = 0
+                    
+                    # 开多头仓位
+                    order = self.binance_client.place_order(
+                        symbol=strategy.symbol,
+                        side='BUY',
+                        quantity=quantity,
+                        position_side='LONG',
+                        reduce_only=False  # 开仓时不使用reduce_only
+                    )
+                    
+                    if order:
+                        strategy.position = quantity
+                        strategy.entry_price = price
+                        self.db_manager.add_trade(
+                            symbol=strategy.symbol,
+                            side='BUY',
+                            quantity=quantity,
+                            price=price,
+                            strategy=strategy.__class__.__name__
+                        )
+                        self.logger.info(f"合约开多 {strategy.symbol}: {quantity} @ {price} (杠杆: {self.leverage}x)")
+                        return True
+            
+            elif action == 'SELL':
+                # 开空头仓位或平多头仓位
+                if strategy.position >= 0:  # 无仓位或有多头仓位
+                    # 如果有多头仓位，先平仓
+                    if strategy.position > 0:
+                        close_quantity = strategy.position
+                        close_order = self.binance_client.place_order(
+                            symbol=strategy.symbol,
+                            side='SELL',
+                            quantity=close_quantity,
+                            position_side='LONG',
+                            reduce_only=True
+                        )
+                        if close_order:
+                            profit_loss = (price - strategy.entry_price) * close_quantity
+                            self.logger.info(f"平多头仓位 {strategy.symbol}: {close_quantity}, P&L: {profit_loss}")
+                            strategy.position = 0
+                    
+                    # 开空头仓位
                     order = self.binance_client.place_order(
                         symbol=strategy.symbol,
                         side='SELL',
-                        quantity=quantity
+                        quantity=quantity,
+                        position_side='SHORT',
+                        reduce_only=False  # 开仓时不使用reduce_only
                     )
+                    
                     if order:
-                        profit_loss = (price - strategy.entry_price) * quantity
-                        strategy.close_position()
+                        strategy.position = -quantity  # 负数表示空头仓位
+                        strategy.entry_price = price
                         self.db_manager.add_trade(
                             symbol=strategy.symbol,
                             side='SELL',
                             quantity=quantity,
                             price=price,
-                            strategy=strategy.__class__.__name__,
-                            profit_loss=profit_loss
+                            strategy=strategy.__class__.__name__
                         )
-                        self.logger.info(f"卖出 {strategy.symbol}: {quantity} @ {price}, P&L: {profit_loss}")
+                        self.logger.info(f"合约开空 {strategy.symbol}: {quantity} @ {price} (杠杆: {self.leverage}x)")
+                        return True
             
             elif action == 'CLOSE':
                 if strategy.position != 0:
-                    side = 'SELL' if strategy.position > 0 else 'BUY'
-                    quantity = abs(strategy.position)
-                    order = self.binance_client.place_order(
-                        symbol=strategy.symbol,
-                        side=side,
-                        quantity=quantity
-                    )
+                    if strategy.position > 0:  # 平多头仓位
+                        order = self.binance_client.place_order(
+                            symbol=strategy.symbol,
+                            side='SELL',
+                            quantity=strategy.position,
+                            position_side='LONG',
+                            reduce_only=True
+                        )
+                    else:  # 平空头仓位
+                        order = self.binance_client.place_order(
+                            symbol=strategy.symbol,
+                            side='BUY',
+                            quantity=abs(strategy.position),
+                            position_side='SHORT',
+                            reduce_only=True
+                        )
+                    
                     if order:
                         profit_loss = (price - strategy.entry_price) * strategy.position
-                        strategy.close_position()
+                        quantity = abs(strategy.position)
+                        strategy.position = 0
+                        strategy.entry_price = 0
+                        
                         self.db_manager.add_trade(
                             symbol=strategy.symbol,
-                            side=side,
+                            side='SELL' if strategy.position > 0 else 'BUY',
                             quantity=quantity,
                             price=price,
                             strategy=strategy.__class__.__name__,
                             profit_loss=profit_loss
                         )
-                        self.logger.info(f"{reason} 平仓 {strategy.symbol}: {quantity} @ {price}, P&L: {profit_loss}")
-                        
+                        self.logger.info(f"{reason} 合约平仓 {strategy.symbol}: {quantity} @ {price}, P&L: {profit_loss}")
+                        return True
+            
+            return False
+            
         except Exception as e:
-            self.logger.error(f"执行交易失败: {e}")
+            self.logger.error(f"执行合约交易失败: {e}")
+            return False
     
     def get_portfolio_status(self):
         """获取投资组合状态"""

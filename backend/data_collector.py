@@ -67,7 +67,9 @@ class DataCollector:
     """数据收集器"""
     
     def __init__(self):
-        self.binance_client = BinanceClient()
+        # 使用客户端管理器避免重复初始化
+        from backend.client_manager import client_manager
+        self.binance_client = client_manager.get_spot_client()
         self.db_manager = DatabaseManager()
         self.logger = logging.getLogger(__name__)
         

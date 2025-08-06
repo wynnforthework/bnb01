@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>合约交易系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-warning">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-chart-line"></i> 合约交易系统
+            </a>
+            <div class="navbar-nav">
+                <a class="nav-link" href="/">
+                    <i class="fas fa-coins"></i> 现货交易
+                </a>
+                <a class="nav-link active" href="/futures">
+                    <i class="fas fa-chart-line"></i> 合约交易
+                </a>
+            </div>
+            <div class="navbar-nav ms-auto">
+                <div class="nav-item">
+                    <span class="nav-link" id="futures-trading-status">
+                        <i class="fas fa-circle text-danger"></i> 未运行
+                    </span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-3">
+        <!-- 合约控制面板 -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="card border-warning">
+                    <div class="card-header bg-warning text-dark">
+                        <h5><i class="fas fa-cogs"></i> 合约交易控制面板</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- 杠杆设置 -->
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <label class="form-label">杠杆倍数</label>
+                                <select class="form-select" id="futures-leverage">
+                                    <option value="5">5x</option>
+                                    <option value="10" selected>10x</option>
+                                    <option value="20">20x</option>
+                                    <option value="50">50x</option>
+                                    <option value="100">100x</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">交易币种</label>
+                                <select class="form-select" id="futures-symbols" multiple size="4">
+                                    <option value="BTCUSDT" selected>BTC/USDT</option>
+                                    <option value="ETHUSDT" selected>ETH/USDT</option>
+                                    <option value="BNBUSDT" selected>BNB/USDT</option>
+                                    <option value="ADAUSDT" selected>ADA/USDT</option>
+                                    <option value="DOGEUSDT">DOGE/USDT</option>
+                                    <option value="SOLUSDT">SOL/USDT</option>
+                                    <option value="DOTUSDT">DOT/USDT</option>
+                                    <option value="AVAXUSDT">AVAX/USDT</option>
+                                    <option value="LINKUSDT">LINK/USDT</option>
+                                    <option value="LTCUSDT">LTC/USDT</option>
+                                    <option value="XRPUSDT">XRP/USDT</option>
+                                    <option value="MATICUSDT">MATIC/USDT</option>
+                                    <option value="UNIUSDT">UNI/USDT</option>
+                                    <option value="ATOMUSDT">ATOM/USDT</option>
+                                    <option value="FILUSDT">FIL/USDT</option>
+                                </select>
+                                <small class="form-text text-muted">按住Ctrl选择多个币种</small>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">当前状态</label>
+                                <div>
+                                    <span id="futures-mode-status" class="badge bg-warning text-dark">合约模式</span>
+                                    <span id="futures-leverage-status" class="badge bg-secondary">10x</span>
+                                </div>
+                                <div class="mt-1">
+                                    <small id="futures-symbols-status" class="text-muted">BTC, ETH</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">风险提示</label>
+                                <div class="alert alert-warning py-1 mb-0">
+                                    <small><i class="fas fa-exclamation-triangle"></i> 合约交易具有高风险</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 交易控制按钮 -->
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button id="start-futures-trading" class="btn btn-success">
+                                <i class="fas fa-play"></i> 启动合约交易
+                            </button>
+                            <button id="stop-futures-trading" class="btn btn-danger">
+                                <i class="fas fa-stop"></i> 停止合约交易
+                            </button>
+                            <button id="update-futures-config" class="btn btn-warning">
+                                <i class="fas fa-cog"></i> 更新配置
+                            </button>
+                            <button id="refresh-futures-data" class="btn btn-info">
+                                <i class="fas fa-sync"></i> 刷新数据
+                            </button>
+                            <button id="manual-futures-order" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#futuresOrderModal">
+                                <i class="fas fa-hand-paper"></i> 手动下单
+                            </button>
+                            <button id="view-futures-positions" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#futuresPositionsModal">
+                                <i class="fas fa-list"></i> 查看持仓
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 合约账户信息 -->
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="card border-warning">
+                    <div class="card-header bg-warning text-dark">
+                        <h5><i class="fas fa-wallet"></i> 合约账户</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="futures-account-info">
+                            <div class="text-center">
+                                <div class="spinner-border text-warning" role="status">
+                                    <span class="visually-hidden">加载中...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card border-warning">
+                    <div class="card-header bg-warning text-dark">
+                        <h5><i class="fas fa-chart-pie"></i> 合约持仓概览</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="futures-portfolio-summary">
+                            <div class="text-center">
+                                <div class="spinner-border text-warning" role="status">
+                                    <span class="visually-hidden">加载中...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 合约持仓详情 -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="card border-warning">
+                    <div class="card-header bg-warning text-dark">
+                        <h5><i class="fas fa-list"></i> 合约持仓</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped" id="futures-positions-table">
+                                <thead>
+                                    <tr>
+                                        <th>交易对</th>
+                                        <th>方向</th>
+                                        <th>数量</th>
+                                        <th>入场价格</th>
+                                        <th>标记价格</th>
+                                        <th>未实现盈亏</th>
+                                        <th>盈亏比例</th>
+                                        <th>保证金</th>
+                                        <th>杠杆</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="10" class="text-center">暂无合约持仓</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 合约交易历史 -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="card border-warning">
+                    <div class="card-header bg-warning text-dark">
+                        <h5><i class="fas fa-history"></i> 合约交易历史</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped" id="futures-trades-table">
+                                <thead>
+                                    <tr>
+                                        <th>时间</th>
+                                        <th>交易对</th>
+                                        <th>方向</th>
+                                        <th>数量</th>
+                                        <th>价格</th>
+                                        <th>策略</th>
+                                        <th>盈亏</th>
+                                        <th>类型</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="8" class="text-center">暂无合约交易记录</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 合约市场数据 -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="card border-warning">
+                    <div class="card-header bg-warning text-dark">
+                        <h5><i class="fas fa-chart-area"></i> 合约市场数据</h5>
+                        <div class="d-flex gap-2">
+                            <select id="futures-symbol-select" class="form-select" style="width: 200px;">
+                                <option value="BTCUSDT">BTC/USDT</option>
+                                <option value="ETHUSDT">ETH/USDT</option>
+                                <option value="BNBUSDT">BNB/USDT</option>
+                                <option value="ADAUSDT">ADA/USDT</option>
+                            </select>
+                            <button id="show-futures-funding" class="btn btn-outline-warning btn-sm">资金费率</button>
+                            <button id="show-futures-orderbook" class="btn btn-outline-info btn-sm">订单簿</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="futures-price-chart" style="height: 400px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 合约策略管理 -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="card border-warning">
+                    <div class="card-header bg-warning text-dark">
+                        <h5><i class="fas fa-brain"></i> 合约策略管理</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped" id="futures-strategies-table">
+                                <thead>
+                                    <tr>
+                                        <th>策略名称</th>
+                                        <th>交易对</th>
+                                        <th>类型</th>
+                                        <th>持仓</th>
+                                        <th>入场价</th>
+                                        <th>杠杆</th>
+                                        <th>状态</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="8" class="text-center">暂无合约策略数据</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 合约手动下单模态框 -->
+    <div class="modal fade" id="futuresOrderModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title">
+                        <i class="fas fa-hand-paper"></i> 合约手动下单
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>订单信息</h6>
+                            <form id="futures-order-form">
+                                <div class="mb-3">
+                                    <label class="form-label">交易对</label>
+                                    <select class="form-select" id="futures-order-symbol" required>
+                                        <option value="BTCUSDT">BTC/USDT</option>
+                                        <option value="ETHUSDT">ETH/USDT</option>
+                                        <option value="BNBUSDT">BNB/USDT</option>
+                                        <option value="ADAUSDT">ADA/USDT</option>
+                                        <option value="DOGEUSDT">DOGE/USDT</option>
+                                        <option value="SOLUSDT">SOL/USDT</option>
+                                        <option value="DOTUSDT">DOT/USDT</option>
+                                        <option value="AVAXUSDT">AVAX/USDT</option>
+                                        <option value="LINKUSDT">LINK/USDT</option>
+                                        <option value="LTCUSDT">LTC/USDT</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">交易方向</label>
+                                    <div class="btn-group w-100" role="group">
+                                        <input type="radio" class="btn-check" name="futures-order-side" id="futures-buy-side" value="BUY" checked>
+                                        <label class="btn btn-outline-success" for="futures-buy-side">
+                                            <i class="fas fa-arrow-up"></i> 做多 (BUY)
+                                        </label>
+                                        <input type="radio" class="btn-check" name="futures-order-side" id="futures-sell-side" value="SELL">
+                                        <label class="btn btn-outline-danger" for="futures-sell-side">
+                                            <i class="fas fa-arrow-down"></i> 做空 (SELL)
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">持仓方向</label>
+                                    <select class="form-select" id="futures-position-side">
+                                        <option value="LONG">做多 (LONG)</option>
+                                        <option value="SHORT">做空 (SHORT)</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">杠杆倍数</label>
+                                    <select class="form-select" id="futures-order-leverage">
+                                        <option value="5">5x</option>
+                                        <option value="10" selected>10x</option>
+                                        <option value="20">20x</option>
+                                        <option value="50">50x</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">订单类型</label>
+                                    <select class="form-select" id="futures-order-type">
+                                        <option value="MARKET">市价单</option>
+                                        <option value="LIMIT">限价单</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">数量</label>
+                                    <input type="number" class="form-control" id="futures-order-quantity" 
+                                           min="0.001" step="0.001" value="0.001" required>
+                                    <div class="form-text">最小数量: 0.001</div>
+                                </div>
+
+                                <div class="mb-3" id="futures-price-input" style="display: none;">
+                                    <label class="form-label">价格 (USDT)</label>
+                                    <input type="number" class="form-control" id="futures-order-price" 
+                                           min="0.01" step="0.01">
+                                    <div class="form-text">限价单需要指定价格</div>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6>市场信息</h6>
+                            <div id="futures-market-info">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-6">
+                                                <small class="text-muted">当前价格</small>
+                                                <div id="futures-current-price" class="h5 text-primary">--</div>
+                                            </div>
+                                            <div class="col-6">
+                                                <small class="text-muted">标记价格</small>
+                                                <div id="futures-mark-price" class="h6 text-info">--</div>
+                                            </div>
+                                        </div>
+                                        <div class="row mt-2">
+                                            <div class="col-6">
+                                                <small class="text-muted">资金费率</small>
+                                                <div id="futures-funding-rate" class="small">--</div>
+                                            </div>
+                                            <div class="col-6">
+                                                <small class="text-muted">下次结算</small>
+                                                <div id="futures-next-funding" class="small">--</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h6 class="mt-3">订单预览</h6>
+                            <div id="futures-order-preview">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-6">
+                                                <small class="text-muted">预计成本</small>
+                                                <div id="futures-estimated-cost" class="h6">$0.00</div>
+                                            </div>
+                                            <div class="col-6">
+                                                <small class="text-muted">所需保证金</small>
+                                                <div id="futures-required-margin" class="h6">$0.00</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-warning" id="confirm-futures-order">
+                        <i class="fas fa-paper-plane"></i> 提交订单
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 合约持仓管理模态框 -->
+    <div class="modal fade" id="futuresPositionsModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title">
+                        <i class="fas fa-chart-line"></i> 合约持仓管理
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <h6>当前持仓</h6>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <button class="btn btn-warning btn-sm" id="refresh-futures-positions">
+                                <i class="fas fa-sync"></i> 刷新持仓
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-striped" id="futures-positions-detail-table">
+                            <thead>
+                                <tr>
+                                    <th>交易对</th>
+                                    <th>方向</th>
+                                    <th>数量</th>
+                                    <th>入场价格</th>
+                                    <th>标记价格</th>
+                                    <th>未实现盈亏</th>
+                                    <th>盈亏比例</th>
+                                    <th>保证金</th>
+                                    <th>杠杆</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="10" class="text-center">暂无合约持仓</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/futures.js') }}"></script>
+</body>
+</html>

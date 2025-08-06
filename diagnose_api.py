@@ -1,223 +1,175 @@
 #!/usr/bin/env python3
 """
-API连接诊断脚本
+诊断API权限和配置问题
 """
 
-import os
-import requests
-import hmac
-import hashlib
-import time
-from urllib.parse import urlencode
-from dotenv import load_dotenv
+import logging
+from backend.binance_client import BinanceClient
 
-load_dotenv()
+# 设置日志级别
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-class BinanceDiagnostic:
-    def __init__(self):
-        self.api_key = os.getenv('BINANCE_API_KEY')
-        self.secret_key = os.getenv('BINANCE_SECRET_KEY')
-        self.testnet = os.getenv('BINANCE_TESTNET', 'True').lower() == 'true'
-        
-        # 根据是否测试网络选择基础URL
-        if self.testnet:
-            self.base_url = 'https://testnet.binance.vision'
-        else:
-            self.base_url = 'https://api.binance.com'
+def diagnose_api_permissions():
+    """诊断API权限问题"""
+    print("🔍 诊断API权限和配置...")
     
-    def check_basic_info(self):
-        """检查基本配置信息"""
-        print("🔍 检查基本配置")
-        print("=" * 50)
-        
-        if not self.api_key:
-            print("❌ API Key未配置")
-            return False
-        
-        if not self.secret_key:
-            print("❌ Secret Key未配置")
-            return False
-        
-        print(f"✅ API Key: {self.api_key[:8]}...{self.api_key[-8:]}")
-        print(f"✅ Secret Key: {self.secret_key[:8]}...{self.secret_key[-8:]}")
-        print(f"✅ 测试网络: {'是' if self.testnet else '否'}")
-        print(f"✅ 基础URL: {self.base_url}")
-        
-        return True
+    print("\n" + "="*50)
+    print("📊 现货API测试")
+    print("="*50)
     
-    def test_server_connection(self):
-        """测试服务器连接"""
-        print("\n🌐 测试服务器连接")
-        print("=" * 50)
+    try:
+        # 测试现货API
+        spot_client = BinanceClient(trading_mode='SPOT')
         
+        # 测试现货账户信息
         try:
-            # 测试服务器时间（无需API密钥）
-            response = requests.get(f"{self.base_url}/api/v3/time", timeout=10)
-            if response.status_code == 200:
-                server_time = response.json()['serverTime']
-                print(f"✅ 服务器连接正常")
-                print(f"   服务器时间: {server_time}")
-                return True
+            account = spot_client.get_account_info()
+            if account:
+                print("✅ 现货账户信息获取成功")
+                print(f"  账户类型: {account.get('accountType', 'N/A')}")
+                print(f"  交易权限: {account.get('canTrade', False)}")
+                print(f"  提现权限: {account.get('canWithdraw', False)}")
+                print(f"  存款权限: {account.get('canDeposit', False)}")
             else:
-                print(f"❌ 服务器连接失败: {response.status_code}")
-                return False
+                print("❌ 现货账户信息获取失败")
         except Exception as e:
-            print(f"❌ 服务器连接异常: {e}")
-            return False
-    
-    def test_public_api(self):
-        """测试公开API"""
-        print("\n📊 测试公开API")
-        print("=" * 50)
+            print(f"❌ 现货账户信息获取失败: {e}")
         
+        # 测试现货余额
         try:
-            # 测试获取交易对信息
-            response = requests.get(f"{self.base_url}/api/v3/ticker/price?symbol=BTCUSDT", timeout=10)
-            if response.status_code == 200:
-                price_data = response.json()
-                print(f"✅ 公开API正常")
-                print(f"   BTC价格: ${float(price_data['price']):,.2f}")
-                return True
-            else:
-                print(f"❌ 公开API失败: {response.status_code}")
-                return False
+            usdt_balance = spot_client.get_balance('USDT')
+            print(f"✅ USDT余额: ${usdt_balance:.2f}")
         except Exception as e:
-            print(f"❌ 公开API异常: {e}")
-            return False
-    
-    def create_signature(self, params):
-        """创建API签名"""
-        query_string = urlencode(params)
-        signature = hmac.new(
-            self.secret_key.encode('utf-8'),
-            query_string.encode('utf-8'),
-            hashlib.sha256
-        ).hexdigest()
-        return signature
-    
-    def test_private_api(self):
-        """测试私有API"""
-        print("\n🔐 测试私有API")
-        print("=" * 50)
+            print(f"❌ 获取USDT余额失败: {e}")
         
+        # 测试现货市场数据
         try:
-            # 准备请求参数
-            timestamp = int(time.time() * 1000)
-            params = {
-                'timestamp': timestamp,
-                'recvWindow': 5000
-            }
-            
-            # 创建签名
-            signature = self.create_signature(params)
-            params['signature'] = signature
-            
-            # 准备请求头
-            headers = {
-                'X-MBX-APIKEY': self.api_key
-            }
-            
-            # 发送请求
-            url = f"{self.base_url}/api/v3/account"
-            response = requests.get(url, params=params, headers=headers, timeout=10)
-            
-            if response.status_code == 200:
-                account_data = response.json()
-                print("✅ 私有API连接成功")
-                print(f"   账户类型: {account_data.get('accountType', 'N/A')}")
-                print(f"   交易权限: {account_data.get('permissions', [])}")
-                
-                # 显示余额（只显示有余额的）
-                balances = account_data.get('balances', [])
-                non_zero_balances = [b for b in balances if float(b['free']) > 0 or float(b['locked']) > 0]
-                
-                if non_zero_balances:
-                    print("   账户余额:")
-                    for balance in non_zero_balances[:5]:  # 只显示前5个
-                        free = float(balance['free'])
-                        locked = float(balance['locked'])
-                        if free > 0 or locked > 0:
-                            print(f"     {balance['asset']}: {free + locked:.8f}")
-                else:
-                    print("   账户余额: 无余额或全部为0")
-                
-                return True
-            else:
-                error_data = response.json() if response.content else {}
-                error_code = error_data.get('code', 'N/A')
-                error_msg = error_data.get('msg', 'Unknown error')
-                
-                print(f"❌ 私有API失败")
-                print(f"   状态码: {response.status_code}")
-                print(f"   错误代码: {error_code}")
-                print(f"   错误信息: {error_msg}")
-                
-                # 提供具体的解决建议
-                if error_code == -2015:
-                    print("\n💡 解决建议:")
-                    if self.testnet:
-                        print("   1. 确认使用的是测试网络API密钥")
-                        print("   2. 测试网络API密钥获取地址: https://testnet.binance.vision/")
-                        print("   3. 检查API密钥是否正确复制")
-                    else:
-                        print("   1. 检查API密钥权限设置")
-                        print("   2. 确认IP地址在白名单中")
-                        print("   3. 检查API密钥是否启用现货交易权限")
-                elif error_code == -1021:
-                    print("\n💡 解决建议:")
-                    print("   1. 检查系统时间是否准确")
-                    print("   2. 尝试同步系统时间")
-                
-                return False
-                
+            price = spot_client.get_ticker_price('BTCUSDT')
+            print(f"✅ BTC现货价格: ${price:.2f}")
         except Exception as e:
-            print(f"❌ 私有API异常: {e}")
-            return False
-    
-    def run_full_diagnostic(self):
-        """运行完整诊断"""
-        print("🔧 Binance API 连接诊断")
-        print("=" * 60)
-        
-        results = []
-        
-        # 基本配置检查
-        results.append(self.check_basic_info())
-        
-        # 服务器连接测试
-        results.append(self.test_server_connection())
-        
-        # 公开API测试
-        results.append(self.test_public_api())
-        
-        # 私有API测试
-        results.append(self.test_private_api())
-        
-        # 总结
-        print("\n" + "=" * 60)
-        print("📋 诊断结果总结")
-        print("=" * 60)
-        
-        passed = sum(results)
-        total = len(results)
-        
-        print(f"通过测试: {passed}/{total}")
-        
-        if passed == total:
-            print("🎉 所有测试通过！API配置正确")
-        else:
-            print("❌ 部分测试失败，请根据上述建议进行修复")
+            print(f"❌ 获取现货价格失败: {e}")
             
-            if not results[0]:
-                print("\n🔧 首先修复基本配置问题")
-            elif not results[1] or not results[2]:
-                print("\n🔧 检查网络连接和防火墙设置")
-            elif not results[3]:
-                print("\n🔧 重点检查API密钥配置和权限")
+    except Exception as e:
+        print(f"❌ 现货客户端初始化失败: {e}")
+    
+    print("\n" + "="*50)
+    print("🚀 合约API测试")
+    print("="*50)
+    
+    try:
+        # 测试合约API
+        futures_client = BinanceClient(trading_mode='FUTURES')
+        
+        # 测试合约账户信息
+        try:
+            account = futures_client.get_account_balance()
+            if account:
+                print("✅ 合约账户信息获取成功")
+                print(f"  总钱包余额: ${account['totalWalletBalance']:.2f}")
+                print(f"  可用余额: ${account['availableBalance']:.2f}")
+                print(f"  未实现盈亏: ${account['totalUnrealizedProfit']:.2f}")
+            else:
+                print("❌ 合约账户信息获取失败")
+        except Exception as e:
+            print(f"❌ 合约账户信息获取失败: {e}")
+            if "Invalid API-key" in str(e):
+                print("  💡 可能原因: API密钥没有合约交易权限")
+            elif "IP" in str(e):
+                print("  💡 可能原因: IP地址未加入白名单")
+        
+        # 测试合约持仓
+        try:
+            positions = futures_client.get_positions()
+            print(f"✅ 合约持仓查询成功，持仓数量: {len(positions)}")
+        except Exception as e:
+            print(f"❌ 合约持仓查询失败: {e}")
+        
+        # 测试合约市场数据（这个通常不需要特殊权限）
+        try:
+            price = futures_client.get_ticker_price('BTCUSDT')
+            print(f"✅ BTC合约价格: ${price:.2f}")
+        except Exception as e:
+            print(f"❌ 获取合约价格失败: {e}")
+        
+        # 测试标记价格
+        try:
+            mark_price = futures_client.get_mark_price('BTCUSDT')
+            if mark_price:
+                print(f"✅ BTC标记价格: ${mark_price['markPrice']:.2f}")
+                print(f"✅ 资金费率: {mark_price['lastFundingRate']:.6f}")
+        except Exception as e:
+            print(f"❌ 获取标记价格失败: {e}")
+        
+        # 测试杠杆设置（需要交易权限）
+        try:
+            result = futures_client.set_leverage('BTCUSDT', 5)
+            if result:
+                print("✅ 杠杆设置测试成功")
+            else:
+                print("❌ 杠杆设置测试失败")
+        except Exception as e:
+            print(f"❌ 杠杆设置测试失败: {e}")
+            if "Invalid API-key" in str(e):
+                print("  💡 确认: API密钥没有合约交易权限")
+                
+    except Exception as e:
+        print(f"❌ 合约客户端初始化失败: {e}")
+    
+    print("\n" + "="*50)
+    print("📋 诊断总结")
+    print("="*50)
+    
+    print("\n🔧 API权限要求:")
+    print("  现货交易需要的权限:")
+    print("    ✅ 读取权限 (Read)")
+    print("    ✅ 现货交易权限 (Spot Trading)")
+    print("")
+    print("  合约交易需要的权限:")
+    print("    ✅ 读取权限 (Read)")
+    print("    ✅ 期货交易权限 (Futures Trading)")
+    print("    ✅ 可能需要保证金交易权限 (Margin Trading)")
+    
+    print("\n💡 解决方案:")
+    print("  1. 登录币安账户")
+    print("  2. 进入 API 管理页面")
+    print("  3. 编辑现有API密钥")
+    print("  4. 启用 '期货交易' 权限")
+    print("  5. 确认IP白名单设置")
+    print("  6. 保存并重新测试")
+    
+    print("\n⚠️ 注意事项:")
+    print("  - 测试网络和主网需要不同的API密钥")
+    print("  - 合约交易权限需要单独申请")
+    print("  - 确保账户已完成KYC认证")
+    print("  - 检查API密钥的IP白名单设置")
+    
+    print("\n🔗 相关链接:")
+    print("  - 币安API管理: https://www.binance.com/cn/my/settings/api-management")
+    print("  - 测试网络: https://testnet.binance.vision/")
+    print("  - API文档: https://binance-docs.github.io/apidocs/")
 
-def main():
-    diagnostic = BinanceDiagnostic()
-    diagnostic.run_full_diagnostic()
+def check_api_configuration():
+    """检查API配置"""
+    print("\n" + "="*50)
+    print("⚙️ API配置检查")
+    print("="*50)
+    
+    from config.config import Config
+    config = Config()
+    
+    print(f"API密钥: {config.BINANCE_API_KEY[:10]}...{config.BINANCE_API_KEY[-10:]}")
+    print(f"密钥长度: {len(config.BINANCE_API_KEY)} 字符")
+    print(f"测试网络: {'是' if config.BINANCE_TESTNET else '否'}")
+    
+    if len(config.BINANCE_API_KEY) != 64:
+        print("⚠️ API密钥长度异常，标准长度应为64字符")
+    
+    if len(config.BINANCE_SECRET_KEY) != 64:
+        print("⚠️ 密钥长度异常，标准长度应为64字符")
+    
+    if not config.BINANCE_API_KEY or not config.BINANCE_SECRET_KEY:
+        print("❌ API密钥或密钥为空，请检查.env文件")
 
 if __name__ == '__main__':
-    main()
+    check_api_configuration()
+    diagnose_api_permissions()

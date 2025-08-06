@@ -7,6 +7,8 @@ class Config:
     # Binance API配置
     BINANCE_API_KEY = os.getenv('BINANCE_API_KEY', '')
     BINANCE_SECRET_KEY = os.getenv('BINANCE_SECRET_KEY', '')
+    BINANCE_API_KEY_FUTURES = os.getenv('BINANCE_API_KEY_FUTURES', '')
+    BINANCE_SECRET_KEY_FUTURES = os.getenv('BINANCE_SECRET_KEY_FUTURES', '')
     BINANCE_TESTNET = os.getenv('BINANCE_TESTNET', 'True').lower() == 'true'
     
     # 数据库配置

@@ -1,113 +1,83 @@
 #!/usr/bin/env python3
 """
-加密货币量化交易系统启动脚本
+启动量化交易系统
 """
 
-import os
-import sys
 import logging
-from datetime import datetime
+import sys
+import os
 
-def setup_logging():
-    """设置日志"""
-    log_dir = 'logs'
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
-    
-    log_file = os.path.join(log_dir, f'trading_{datetime.now().strftime("%Y%m%d")}.log')
-    
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler(log_file, encoding='utf-8'),
-            logging.StreamHandler(sys.stdout)
-        ]
-    )
-
-def check_environment():
-    """检查环境配置"""
-    # 确保加载.env文件
-    from dotenv import load_dotenv
-    load_dotenv()
-    
-    required_vars = [
-        'BINANCE_API_KEY',
-        'BINANCE_SECRET_KEY'
-    ]
-    
-    missing_vars = []
-    for var in required_vars:
-        value = os.getenv(var)
-        if not value or value.strip() == '' or 'your_' in value.lower():
-            missing_vars.append(var)
-    
-    if missing_vars:
-        print("❌ 缺少必要的环境变量:")
-        for var in missing_vars:
-            print(f"   - {var}")
-        print("\n请检查 .env 文件配置")
-        return False
-    
-    print("✅ 环境变量检查通过")
-    return True
-
-def check_dependencies():
-    """检查依赖包"""
-    try:
-        import flask
-        import binance
-        import pandas
-        import numpy
-        import sqlalchemy
-        print("✅ 依赖包检查通过")
-        return True
-    except ImportError as e:
-        print(f"❌ 缺少依赖包: {e}")
-        print("请运行: pip install -r requirements.txt")
-        return False
+# 设置日志
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 def main():
     """主函数"""
-    print("🚀 启动加密货币量化交易系统...")
-    print("=" * 50)
-    
-    # 设置日志
-    setup_logging()
-    logger = logging.getLogger(__name__)
-    
-    # 检查环境
-    if not check_dependencies():
-        sys.exit(1)
-    
-    if not check_environment():
-        sys.exit(1)
-    
-    # 启动应用
     try:
-        from app import app, socketio
-        logger.info("系统启动成功")
-        print("\n🎉 系统启动成功!")
-        print("📊 Web界面: http://localhost:5000")
-        print("📝 日志文件: logs/")
-        print("\n按 Ctrl+C 停止系统")
-        print("=" * 50)
+        print("🚀 启动量化交易系统...")
+        print("📊 系统信息:")
+        print(f"  Python版本: {sys.version}")
+        print(f"  工作目录: {os.getcwd()}")
         
-        socketio.run(
-            app, 
-            debug=False, 
-            host='0.0.0.0', 
-            port=5000,
-            allow_unsafe_werkzeug=True
-        )
+        # 检查必要的文件
+        required_files = [
+            'app.py',
+            'config/config.py',
+            '.env',
+            'backend/trading_engine.py',
+            'backend/binance_client.py'
+        ]
+        
+        missing_files = []
+        for file in required_files:
+            if not os.path.exists(file):
+                missing_files.append(file)
+        
+        if missing_files:
+            print("❌ 缺少必要文件:")
+            for file in missing_files:
+                print(f"  - {file}")
+            return False
+        
+        print("✅ 文件检查完成")
+        
+        # 导入并启动应用
+        print("🔧 初始化系统组件...")
+        
+        try:
+            import app
+            print("✅ 应用模块加载成功")
+        except Exception as e:
+            print(f"❌ 应用模块加载失败: {e}")
+            return False
+        
+        print("\n🌐 Web服务器信息:")
+        print("  现货交易页面: http://localhost:5000/")
+        print("  合约交易页面: http://localhost:5000/futures")
+        print("\n💡 使用说明:")
+        print("  1. 打开浏览器访问上述地址")
+        print("  2. 现货和合约交易页面完全独立")
+        print("  3. 可以同时或分别使用两种交易模式")
+        print("  4. 按 Ctrl+C 停止服务器")
+        
+        print("\n🚀 启动Web服务器...")
+        
+        # 启动Flask应用
+        app.socketio.run(app.app, debug=False, host='0.0.0.0', port=5000)
         
     except KeyboardInterrupt:
-        logger.info("用户停止系统")
-        print("\n👋 系统已停止")
+        print("\n\n⏹️  收到停止信号，正在关闭系统...")
+        print("✅ 系统已安全关闭")
+        return True
+        
     except Exception as e:
-        logger.error(f"系统启动失败: {e}")
         print(f"❌ 系统启动失败: {e}")
-        sys.exit(1)
+        import traceback
+        print(f"错误详情: {traceback.format_exc()}")
+        return False
 
 if __name__ == '__main__':
-    main()
+    success = main()
+    sys.exit(0 if success else 1)
