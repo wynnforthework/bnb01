@@ -1,6 +1,7 @@
 import logging
 import time
 import asyncio
+import pandas as pd
 from datetime import datetime
 from typing import Dict, List
 from backend.binance_client import BinanceClient
@@ -34,8 +35,87 @@ class TradingEngine:
     
     def _initialize_strategies(self):
         """初始化交易策略"""
-        for symbol in self.config.DEFAULT_SYMBOLS:
-            # MA策略
+        # 验证并过滤有效的交易对
+        all_symbols = self.config.DEFAULT_SYMBOLS + [
+            'DOGEUSDT', 'SOLUSDT', 'MATICUSDT', 'DOTUSDT', 'AVAXUSDT', 
+            'LINKUSDT', 'UNIUSDT', 'LTCUSDT', 'ATOMUSDT', 'FILUSDT'
+        ]
+        
+        # 验证交易对有效性
+        valid_symbols = []
+        for symbol in all_symbols:
+            if self.binance_client._is_valid_symbol(symbol):
+                # 进一步验证是否能获取数据
+                try:
+                    test_data = self.binance_client.get_klines(symbol, '1h', 1)
+                    if test_data is not None and not test_data.empty:
+                        valid_symbols.append(symbol)
+                        self.logger.info(f"验证交易对 {symbol}: 有效")
+                    else:
+                        self.logger.warning(f"验证交易对 {symbol}: 无法获取数据")
+                except Exception as e:
+                    self.logger.warning(f"验证交易对 {symbol} 失败: {e}")
+            else:
+                self.logger.warning(f"交易对格式无效: {symbol}")
+        
+        if not valid_symbols:
+            self.logger.error("没有找到有效的交易对，使用默认配置")
+            valid_symbols = ['BTCUSDT', 'ETHUSDT']  # 最基本的交易对
+        
+        # 只为主要交易对创建所有策略
+        main_symbols = [s for s in self.config.DEFAULT_SYMBOLS if s in valid_symbols]
+        
+        for symbol in main_symbols:
+            # MA策略 - 使用更敏感的参数
+            ma_strategy = MovingAverageStrategy(
+                symbol=symbol,
+                parameters={
+                    'short_window': 5,   # 更短的窗口，更敏感
+                    'long_window': 15,   # 更短的窗口，更敏感
+                    'stop_loss': 0.02,
+                    'take_profit': 0.04, # 降低止盈目标
+                    'position_size': 0.03
+                }
+            )
+            self.strategies[f"{symbol}_MA"] = ma_strategy
+            
+            # RSI策略 - 使用更敏感的参数
+            rsi_strategy = RSIStrategy(
+                symbol=symbol,
+                parameters={
+                    'rsi_period': 10,    # 更短的周期，更敏感
+                    'oversold': 35,      # 提高超卖阈值，更容易触发买入
+                    'overbought': 65,    # 降低超买阈值，更容易触发卖出
+                    'stop_loss': 0.02,
+                    'take_profit': 0.04, # 降低止盈目标
+                    'position_size': 0.03
+                }
+            )
+            self.strategies[f"{symbol}_RSI"] = rsi_strategy
+            
+            # 机器学习策略 - 使用更敏感的参数
+            ml_strategy = MLStrategy(
+                symbol=symbol,
+                parameters={
+                    'model_type': 'random_forest',
+                    'lookback_period': 15,   # 更短的回看期
+                    'prediction_horizon': 1,
+                    'min_confidence': 0.45,  # 进一步降低信心阈值
+                    'up_threshold': 0.005,   # 0.5% - 更敏感的阈值
+                    'down_threshold': -0.005, # -0.5% - 更敏感的阈值
+                    'stop_loss': 0.02,
+                    'take_profit': 0.04,     # 降低止盈目标
+                    'position_size': 0.03,
+                    'retrain_frequency': 30, # 更频繁重训练
+                    'min_training_samples': 80  # 降低最小训练样本
+                }
+            )
+            self.strategies[f"{symbol}_ML"] = ml_strategy
+        
+        # 为扩展交易对只创建简单策略
+        extended_symbols = [s for s in valid_symbols if s not in main_symbols]
+        for symbol in extended_symbols:
+            # 只创建MA策略（资源消耗较小）
             ma_strategy = MovingAverageStrategy(
                 symbol=symbol,
                 parameters={
@@ -43,57 +123,52 @@ class TradingEngine:
                     'long_window': 30,
                     'stop_loss': 0.02,
                     'take_profit': 0.05,
-                    'position_size': 0.03
+                    'position_size': 0.02  # 较小仓位
                 }
             )
             self.strategies[f"{symbol}_MA"] = ma_strategy
+    
+    def add_strategy(self, symbol: str, strategy_type: str, parameters: dict = None):
+        """动态添加策略"""
+        try:
+            if parameters is None:
+                parameters = {}
             
-            # RSI策略
-            rsi_strategy = RSIStrategy(
-                symbol=symbol,
-                parameters={
-                    'rsi_period': 14,
-                    'oversold': 30,
-                    'overbought': 70,
-                    'stop_loss': 0.02,
-                    'take_profit': 0.05,
-                    'position_size': 0.03
-                }
-            )
-            self.strategies[f"{symbol}_RSI"] = rsi_strategy
+            strategy_key = f"{symbol}_{strategy_type}"
             
-            # 机器学习策略
-            ml_strategy = MLStrategy(
-                symbol=symbol,
-                parameters={
-                    'model_type': 'random_forest',
-                    'lookback_period': 20,
-                    'prediction_horizon': 1,
-                    'min_confidence': 0.65,
-                    'up_threshold': 0.015,
-                    'down_threshold': -0.015,
-                    'stop_loss': 0.025,
-                    'take_profit': 0.06,
-                    'position_size': 0.04
-                }
-            )
-            self.strategies[f"{symbol}_ML"] = ml_strategy
+            if strategy_type == 'MA':
+                strategy = MovingAverageStrategy(symbol, parameters)
+            elif strategy_type == 'RSI':
+                strategy = RSIStrategy(symbol, parameters)
+            elif strategy_type == 'ML':
+                strategy = MLStrategy(symbol, parameters)
+            elif strategy_type == 'LSTM':
+                strategy = LSTMStrategy(symbol, parameters)
+            else:
+                self.logger.error(f"不支持的策略类型: {strategy_type}")
+                return False
             
-            # LSTM策略（可选）
-            lstm_strategy = LSTMStrategy(
-                symbol=symbol,
-                parameters={
-                    'sequence_length': 60,
-                    'prediction_horizon': 1,
-                    'epochs': 30,
-                    'batch_size': 32,
-                    'min_confidence': 0.7,
-                    'stop_loss': 0.03,
-                    'take_profit': 0.08,
-                    'position_size': 0.02
-                }
-            )
-            self.strategies[f"{symbol}_LSTM"] = lstm_strategy
+            self.strategies[strategy_key] = strategy
+            self.logger.info(f"已添加策略: {strategy_key}")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"添加策略失败: {e}")
+            return False
+    
+    def remove_strategy(self, strategy_key: str):
+        """移除策略"""
+        try:
+            if strategy_key in self.strategies:
+                del self.strategies[strategy_key]
+                self.logger.info(f"已移除策略: {strategy_key}")
+                return True
+            else:
+                self.logger.warning(f"策略不存在: {strategy_key}")
+                return False
+        except Exception as e:
+            self.logger.error(f"移除策略失败: {e}")
+            return False
     
     def _start_data_collection(self):
         """启动数据收集"""
@@ -187,26 +262,42 @@ class TradingEngine:
     def _get_enhanced_market_data(self, symbol: str):
         """获取增强的市场数据"""
         try:
+            # 验证交易对格式
+            if not symbol or not isinstance(symbol, str):
+                self.logger.error(f"无效的交易对: {symbol}")
+                return pd.DataFrame()
+            
             # 优先从数据库获取
             data = self.data_collector.get_market_data(symbol, self.config.DEFAULT_TIMEFRAME, limit=200)
             
-            if data.empty or len(data) < 50:
+            if data is None or data.empty or len(data) < 50:
                 # 如果数据库数据不足，从API获取
-                data = self.binance_client.get_klines(
+                self.logger.info(f"从API获取 {symbol} 数据...")
+                api_data = self.binance_client.get_klines(
                     symbol=symbol,
                     interval=self.config.DEFAULT_TIMEFRAME,
                     limit=200
                 )
+                
+                if api_data is not None and not api_data.empty:
+                    data = api_data
+                else:
+                    self.logger.warning(f"无法获取 {symbol} 的市场数据")
+                    return pd.DataFrame()
             
-            if not data.empty:
+            if data is not None and not data.empty:
                 # 计算技术指标
-                data = self.data_collector.calculate_technical_indicators(data, symbol)
+                try:
+                    data = self.data_collector.calculate_technical_indicators(data, symbol)
+                except Exception as indicator_error:
+                    self.logger.warning(f"计算技术指标失败: {indicator_error}")
+                    # 即使技术指标计算失败，也返回基础数据
             
-            return data
+            return data if data is not None else pd.DataFrame()
             
         except Exception as e:
-            self.logger.error(f"获取增强市场数据失败: {e}")
-            return None
+            self.logger.error(f"获取增强市场数据失败 {symbol}: {e}")
+            return pd.DataFrame()
     
     def _should_close_position(self, strategy, current_price: float) -> bool:
         """检查是否应该平仓"""
@@ -314,6 +405,16 @@ class TradingEngine:
                             strategy.symbol, price, stop_loss, risk_reward_ratio=2.5
                         )
                         
+                        # 更新数据库中的持仓记录
+                        current_price = self.binance_client.get_ticker_price(strategy.symbol)
+                        if current_price:
+                            self.db_manager.update_position(
+                                symbol=strategy.symbol,
+                                quantity=quantity,
+                                avg_price=price,
+                                current_price=current_price
+                            )
+                        
                         self.db_manager.add_trade(
                             symbol=strategy.symbol,
                             side='BUY',
@@ -324,6 +425,7 @@ class TradingEngine:
                         
                         self.logger.info(f"买入 {strategy.symbol}: {quantity:.6f} @ ${price:.4f}")
                         self.logger.info(f"  止损: ${stop_loss:.4f}, 止盈: ${take_profit:.4f}")
+                        self.logger.info(f"  持仓已更新到数据库")
             
             elif action == 'SELL' and strategy.position >= 0:
                 if strategy.position > 0:
@@ -338,6 +440,13 @@ class TradingEngine:
                         profit_loss = (price - strategy.entry_price) * quantity
                         strategy.close_position()
                         
+                        # 从数据库中移除持仓记录（卖出全部）
+                        from backend.database import Position
+                        position = self.db_manager.session.query(Position).filter_by(symbol=strategy.symbol).first()
+                        if position:
+                            self.db_manager.session.delete(position)
+                            self.db_manager.session.commit()
+                        
                         self.db_manager.add_trade(
                             symbol=strategy.symbol,
                             side='SELL',
@@ -348,6 +457,7 @@ class TradingEngine:
                         )
                         
                         self.logger.info(f"卖出 {strategy.symbol}: {quantity:.6f} @ ${price:.4f}, P&L: ${profit_loss:.2f}")
+                        self.logger.info(f"  持仓已从数据库移除")
             
             elif action == 'CLOSE':
                 if strategy.position != 0:

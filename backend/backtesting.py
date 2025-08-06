@@ -60,7 +60,8 @@ class BacktestEngine:
                 current_time = data.iloc[i]['timestamp']
                 
                 # 跳过数据不足的情况
-                if len(current_data) < 50:  # 需要足够的数据计算指标
+                min_data_required = getattr(strategy, 'min_training_samples', 50)
+                if len(current_data) < min_data_required:  # 需要足够的数据计算指标
                     equity_curve.append(capital)
                     continue
                 
@@ -192,30 +193,102 @@ class BacktestEngine:
                            interval: str) -> pd.DataFrame:
         """获取历史数据"""
         try:
-            # 先尝试从数据库获取
-            data = self.data_collector.get_market_data(symbol, interval, limit=10000)
+            self.logger.info(f"获取历史数据: {symbol}, {start_date} 到 {end_date}, 间隔: {interval}")
             
+            # 方法1: 先尝试从数据库获取
+            data = self.data_collector.get_market_data(symbol, interval, limit=10000)
+            self.logger.info(f"从数据库获取到 {len(data)} 条数据")
+            
+            # 方法2: 如果数据库没有数据，从API获取
             if data.empty:
-                # 如果数据库没有数据，从API获取
-                self.logger.info(f"从API获取 {symbol} 历史数据...")
-                import asyncio
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                data = loop.run_until_complete(
-                    self.data_collector.collect_historical_data(symbol, interval, days=365)
-                )
-                loop.close()
+                self.logger.info(f"数据库无数据，从API获取 {symbol} 历史数据...")
+                try:
+                    import asyncio
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    
+                    # 计算需要获取的天数
+                    start_dt = pd.to_datetime(start_date)
+                    end_dt = pd.to_datetime(end_date)
+                    days = (end_dt - start_dt).days + 1
+                    days = min(days, 365)  # 最多获取365天
+                    
+                    data = loop.run_until_complete(
+                        self.data_collector.collect_historical_data(symbol, interval, days)
+                    )
+                    loop.close()
+                    self.logger.info(f"从API获取到 {len(data)} 条数据")
+                    
+                except Exception as api_error:
+                    self.logger.error(f"从API获取数据失败: {api_error}")
+                    # 方法3: 直接使用Binance客户端获取
+                    try:
+                        from backend.binance_client import BinanceClient
+                        binance_client = BinanceClient()
+                        data = binance_client.get_klines(symbol=symbol, interval=interval, limit=1000)
+                        self.logger.info(f"从Binance客户端获取到 {len(data)} 条数据")
+                    except Exception as client_error:
+                        self.logger.error(f"从Binance客户端获取数据失败: {client_error}")
+                        return pd.DataFrame()
+            
+            # 检查数据是否为空
+            if data.empty:
+                self.logger.error("所有方法都无法获取到数据")
+                return pd.DataFrame()
+            
+            # 确保数据格式正确
+            if 'timestamp' not in data.columns:
+                self.logger.error("数据缺少timestamp列")
+                return pd.DataFrame()
             
             # 过滤日期范围
-            if not data.empty:
+            try:
                 start_dt = pd.to_datetime(start_date)
                 end_dt = pd.to_datetime(end_date)
+                
+                # 确保timestamp列是datetime类型
+                if not pd.api.types.is_datetime64_any_dtype(data['timestamp']):
+                    data['timestamp'] = pd.to_datetime(data['timestamp'])
+                
+                # 过滤数据
+                original_len = len(data)
                 data = data[(data['timestamp'] >= start_dt) & (data['timestamp'] <= end_dt)]
+                self.logger.info(f"日期过滤后剩余 {len(data)} 条数据 (原始: {original_len})")
+                
+                if data.empty:
+                    self.logger.warning(f"日期范围 {start_date} 到 {end_date} 内没有数据")
+                    # 如果指定日期范围内没有数据，返回最近的数据
+                    data = self.data_collector.get_market_data(symbol, interval, limit=500)
+                    if not data.empty:
+                        self.logger.info(f"使用最近的 {len(data)} 条数据进行回测")
+                
+            except Exception as filter_error:
+                self.logger.error(f"日期过滤失败: {filter_error}")
+                # 如果日期过滤失败，返回原始数据
+                pass
+            
+            # 最终检查
+            if data.empty:
+                self.logger.error("最终数据为空")
+                return pd.DataFrame()
+            
+            # 确保必要的列存在
+            required_columns = ['timestamp', 'open', 'high', 'low', 'close', 'volume']
+            missing_columns = [col for col in required_columns if col not in data.columns]
+            if missing_columns:
+                self.logger.error(f"数据缺少必要的列: {missing_columns}")
+                return pd.DataFrame()
+            
+            # 排序数据
+            data = data.sort_values('timestamp').reset_index(drop=True)
+            self.logger.info(f"最终返回 {len(data)} 条有效数据")
             
             return data
             
         except Exception as e:
             self.logger.error(f"获取历史数据失败: {e}")
+            import traceback
+            self.logger.error(f"错误详情: {traceback.format_exc()}")
             return pd.DataFrame()
     
     def _close_position(self, position: float, entry_price: float, current_price: float) -> float:
@@ -271,7 +344,14 @@ class BacktestEngine:
             
             total_profit = sum(t.get('profit', 0) for t in profitable_trades)
             total_loss = abs(sum(t.get('profit', 0) for t in losing_trades))
-            profit_factor = total_profit / total_loss if total_loss > 0 else float('inf')
+            
+            # 修复盈亏比计算，避免无穷大
+            if total_loss > 0:
+                profit_factor = total_profit / total_loss
+            elif total_profit > 0:
+                profit_factor = 999.99  # 设置一个合理的上限值
+            else:
+                profit_factor = 0.0
             
             avg_trade_return = sum(t.get('profit', 0) for t in trades) / len(trades) if trades else 0
             

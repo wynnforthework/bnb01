@@ -32,7 +32,7 @@ def check_dependencies():
         'pandas',
         'numpy',
         'sqlalchemy',
-        'python_dotenv',
+        'dotenv',  # python-dotenv的导入名是dotenv
         'psutil'
     ]
     

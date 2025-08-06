@@ -47,7 +47,7 @@
 - **历史数据**: 多时间周期K线数据自动收集
 - **实时数据**: WebSocket实时价格和订单簿数据
 - **技术指标**: SMA、EMA、RSI、MACD、布林带、ATR等
-- **数据存储**: SQLite数据库，支持扩展到PostgreSQL/MySQL
+- **数据存储**: SQLite数据库，支持扩展到PostgreSQL/MyS
 
 ## 系统架构
 

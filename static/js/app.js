@@ -99,6 +99,11 @@ function bindEvents() {
         e.preventDefault();
         trainMLModel();
     });
+    
+    // 添加策略按钮
+    document.getElementById('confirm-add-strategy').addEventListener('click', function() {
+        addNewStrategy();
+    });
 }
 
 // 加载初始数据
@@ -134,17 +139,46 @@ function displayAccountBalances(balances) {
         return;
     }
     
+    // 过滤并排序余额，只显示重要的资产
+    const importantAssets = ['USDT', 'BTC', 'ETH', 'BNB', 'ADA'];
+    const filteredBalances = balances
+        .filter(balance => balance.total > 0.001) // 过滤掉极小余额
+        .sort((a, b) => {
+            // 重要资产优先显示
+            const aIndex = importantAssets.indexOf(a.asset);
+            const bIndex = importantAssets.indexOf(b.asset);
+            
+            if (aIndex !== -1 && bIndex !== -1) {
+                return aIndex - bIndex;
+            } else if (aIndex !== -1) {
+                return -1;
+            } else if (bIndex !== -1) {
+                return 1;
+            } else {
+                return b.total - a.total; // 按余额大小排序
+            }
+        })
+        .slice(0, 8); // 最多显示8个资产
+    
     let html = '';
-    balances.forEach(balance => {
-        if (balance.total > 0) {
-            html += `
-                <div class="balance-item">
-                    <span class="balance-asset">${balance.asset}</span>
-                    <span class="balance-amount">${balance.total.toFixed(8)}</span>
-                </div>
-            `;
-        }
+    filteredBalances.forEach(balance => {
+        const displayAmount = balance.total > 1 ? balance.total.toFixed(4) : balance.total.toFixed(8);
+        html += `
+            <div class="balance-item">
+                <span class="balance-asset">${balance.asset}</span>
+                <span class="balance-amount">${displayAmount}</span>
+            </div>
+        `;
     });
+    
+    // 如果有更多资产，显示提示
+    if (balances.length > filteredBalances.length) {
+        html += `
+            <div class="balance-item text-muted">
+                <small>还有 ${balances.length - filteredBalances.length} 个其他资产...</small>
+            </div>
+        `;
+    }
     
     container.innerHTML = html;
 }
@@ -937,6 +971,247 @@ function displayStrategyComparison(comparison) {
 }
 
 // 训练机器学习模型
+async function trainMLModel() {
+    try {
+        const symbol = document.getElementById('ml-symbol').value;
+        const modelType = document.getElementById('ml-model-type').value;
+        
+        const statusDiv = document.getElementById('ml-training-status');
+        statusDiv.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> 正在训练模型...';
+        
+        const response = await fetch('/api/ml/train', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                symbol: symbol,
+                model_type: modelType
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            statusDiv.innerHTML = `<div class="text-success">✓ ${data.message}</div>`;
+            showSuccess(data.message);
+        } else {
+            statusDiv.innerHTML = `<div class="text-danger">✗ ${data.message}</div>`;
+            showError(data.message);
+        }
+    } catch (error) {
+        document.getElementById('ml-training-status').innerHTML = `<div class="text-danger">✗ 训练失败: ${error.message}</div>`;
+        showError('模型训练失败: ' + error.message);
+    }
+}
+
+// 加载系统状态
+async function loadSystemStatus() {
+    try {
+        const response = await fetch('/api/system/status');
+        const data = await response.json();
+        
+        if (data.success) {
+            displaySystemStatus(data.status);
+        }
+    } catch (error) {
+        console.error('加载系统状态失败:', error);
+    }
+}
+
+// 显示系统状态
+function displaySystemStatus(status) {
+    const container = document.getElementById('system-status');
+    
+    container.innerHTML = `
+        <div class="row">
+            <div class="col-6">
+                <div class="status-item">
+                    <span>交易引擎</span>
+                    <span class="${status.trading_engine ? 'text-success' : 'text-danger'}">
+                        ${status.trading_engine ? '运行中' : '已停止'}
+                    </span>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="status-item">
+                    <span>数据收集</span>
+                    <span class="${status.data_collection ? 'text-success' : 'text-danger'}">
+                        ${status.data_collection ? '运行中' : '已停止'}
+                    </span>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="status-item">
+                    <span>数据库</span>
+                    <span class="${status.database ? 'text-success' : 'text-danger'}">
+                        ${status.database ? '正常' : '异常'}
+                    </span>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="status-item">
+                    <span>策略数量</span>
+                    <span class="text-info">${status.strategies_count}</span>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// 扩展初始化数据加载
+function loadInitialData() {
+    loadAccountData();
+    loadPortfolioData();
+    loadTradesData();
+    loadMarketData(currentSymbol);
+    loadRiskMetrics();
+    loadSystemAlerts();
+    loadSystemStatus();
+}
+
+// 扩展定期刷新
+setInterval(() => {
+    if (document.visibilityState === 'visible') {
+        loadAccountData();
+        checkTradingStatus();
+        loadRiskMetrics();
+        loadSystemAlerts();
+        loadSystemStatus();
+    }
+}, 30000); // 每30秒刷新一次// 
+添加新策略
+async function addNewStrategy() {
+    try {
+        const symbol = document.getElementById('new-strategy-symbol').value;
+        const strategyType = document.getElementById('new-strategy-type').value;
+        const positionSize = parseFloat(document.getElementById('new-strategy-position-size').value) / 100;
+        const stopLoss = parseFloat(document.getElementById('new-strategy-stop-loss').value) / 100;
+        const takeProfit = parseFloat(document.getElementById('new-strategy-take-profit').value) / 100;
+        
+        if (!symbol || !strategyType) {
+            showError('请选择交易对和策略类型');
+            return;
+        }
+        
+        const parameters = {
+            position_size: positionSize,
+            stop_loss: stopLoss,
+            take_profit: takeProfit
+        };
+        
+        // 根据策略类型添加特定参数
+        if (strategyType === 'MA') {
+            parameters.short_window = 10;
+            parameters.long_window = 30;
+        } else if (strategyType === 'RSI') {
+            parameters.rsi_period = 14;
+            parameters.oversold = 30;
+            parameters.overbought = 70;
+        } else if (strategyType === 'ML') {
+            parameters.model_type = 'random_forest';
+            parameters.min_confidence = 0.55;
+            parameters.lookback_period = 20;
+        }
+        
+        const response = await fetch('/api/strategies/add', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                symbol: symbol,
+                strategy_type: strategyType,
+                parameters: parameters
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showSuccess(data.message);
+            // 关闭模态框
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addStrategyModal'));
+            modal.hide();
+            // 重新加载策略列表
+            loadStrategies();
+            // 清空表单
+            document.getElementById('add-strategy-form').reset();
+        } else {
+            showError(data.message);
+        }
+        
+    } catch (error) {
+        showError('添加策略失败: ' + error.message);
+    }
+}
+
+// 移除策略
+async function removeStrategy(strategyKey) {
+    try {
+        if (!confirm(`确定要移除策略 ${strategyKey} 吗？`)) {
+            return;
+        }
+        
+        const response = await fetch('/api/strategies/remove', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                strategy_key: strategyKey
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showSuccess(data.message);
+            loadStrategies(); // 重新加载策略列表
+        } else {
+            showError(data.message);
+        }
+        
+    } catch (error) {
+        showError('移除策略失败: ' + error.message);
+    }
+}
+
+// 更新策略列表显示（包含操作按钮）
+function displayStrategies(strategies) {
+    const tbody = document.querySelector('#strategies-table tbody');
+    
+    if (strategies.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center">暂无策略数据</td></tr>';
+        return;
+    }
+    
+    let html = '';
+    strategies.forEach(strategy => {
+        const statusClass = strategy.position !== 0 ? 'text-success' : 'text-muted';
+        const statusText = strategy.position !== 0 ? '持仓中' : '空仓';
+        
+        html += `
+            <tr>
+                <td>${strategy.name}</td>
+                <td>${strategy.symbol}</td>
+                <td>${strategy.type}</td>
+                <td>${strategy.position.toFixed(6)}</td>
+                <td>$${strategy.entry_price.toFixed(4)}</td>
+                <td class="${statusClass}">${statusText}</td>
+                <td>
+                    <button class="btn btn-danger btn-sm" onclick="removeStrategy('${strategy.name}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+    
+    tbody.innerHTML = html;
+}
+
+// 完善训练机器学习模型函数
 async function trainMLModel() {
     try {
         const symbol = document.getElementById('ml-symbol').value;

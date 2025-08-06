@@ -194,53 +194,108 @@ class DataCollector:
     def calculate_technical_indicators(self, df: pd.DataFrame, symbol: str) -> pd.DataFrame:
         """计算技术指标"""
         try:
-            import talib
+            # 首先尝试使用ta库（更稳定）
+            try:
+                import ta
+                self.logger.info("使用ta库计算技术指标")
+                return self._calculate_ta_indicators(df, symbol)
+            except ImportError:
+                pass
             
-            # 确保数据类型正确
-            high = df['high'].astype(float).values
-            low = df['low'].astype(float).values
-            close = df['close'].astype(float).values
-            volume = df['volume'].astype(float).values
+            # 然后尝试使用talib
+            try:
+                import talib
+                self.logger.info("使用talib计算技术指标")
+                
+                # 确保数据类型正确
+                high = df['high'].astype(float).values
+                low = df['low'].astype(float).values
+                close = df['close'].astype(float).values
+                volume = df['volume'].astype(float).values
+                
+                # 移动平均线
+                df['sma_10'] = talib.SMA(close, timeperiod=10)
+                df['sma_20'] = talib.SMA(close, timeperiod=20)
+                df['sma_50'] = talib.SMA(close, timeperiod=50)
+                df['ema_12'] = talib.EMA(close, timeperiod=12)
+                df['ema_26'] = talib.EMA(close, timeperiod=26)
+                
+                # RSI
+                df['rsi_14'] = talib.RSI(close, timeperiod=14)
+                
+                # MACD
+                macd, macd_signal, macd_hist = talib.MACD(close, fastperiod=12, slowperiod=26, signalperiod=9)
+                df['macd'] = macd
+                df['macd_signal'] = macd_signal
+                df['macd_histogram'] = macd_hist
+                
+                # 布林带
+                bb_upper, bb_middle, bb_lower = talib.BBANDS(close, timeperiod=20, nbdevup=2, nbdevdn=2)
+                df['bb_upper'] = bb_upper
+                df['bb_middle'] = bb_middle
+                df['bb_lower'] = bb_lower
+                
+                # ATR
+                df['atr'] = talib.ATR(high, low, close, timeperiod=14)
+                
+                # 成交量移动平均
+                df['volume_sma'] = talib.SMA(volume, timeperiod=20)
+                
+                # 存储技术指标到数据库
+                self._store_technical_indicators(df, symbol)
+                
+                return df
+                
+            except ImportError:
+                self.logger.info("talib未安装，使用简化版技术指标计算")
+                return self._calculate_simple_indicators(df, symbol)
+            
+        except Exception as e:
+            self.logger.error(f"计算技术指标失败: {e}")
+            return self._calculate_simple_indicators(df, symbol)
+    
+    def _calculate_ta_indicators(self, df: pd.DataFrame, symbol: str) -> pd.DataFrame:
+        """使用ta库计算技术指标"""
+        try:
+            import ta
             
             # 移动平均线
-            df['sma_10'] = talib.SMA(close, timeperiod=10)
-            df['sma_20'] = talib.SMA(close, timeperiod=20)
-            df['sma_50'] = talib.SMA(close, timeperiod=50)
-            df['ema_12'] = talib.EMA(close, timeperiod=12)
-            df['ema_26'] = talib.EMA(close, timeperiod=26)
+            df['sma_10'] = ta.trend.sma_indicator(df['close'], window=10)
+            df['sma_20'] = ta.trend.sma_indicator(df['close'], window=20)
+            df['sma_50'] = ta.trend.sma_indicator(df['close'], window=50)
+            df['ema_12'] = ta.trend.ema_indicator(df['close'], window=12)
+            df['ema_26'] = ta.trend.ema_indicator(df['close'], window=26)
             
             # RSI
-            df['rsi_14'] = talib.RSI(close, timeperiod=14)
+            df['rsi_14'] = ta.momentum.rsi(df['close'], window=14)
             
             # MACD
-            macd, macd_signal, macd_hist = talib.MACD(close, fastperiod=12, slowperiod=26, signalperiod=9)
-            df['macd'] = macd
+            macd_line = ta.trend.macd(df['close'])
+            macd_signal = ta.trend.macd_signal(df['close'])
+            df['macd'] = macd_line
             df['macd_signal'] = macd_signal
-            df['macd_histogram'] = macd_hist
+            df['macd_histogram'] = macd_line - macd_signal
             
             # 布林带
-            bb_upper, bb_middle, bb_lower = talib.BBANDS(close, timeperiod=20, nbdevup=2, nbdevdn=2)
-            df['bb_upper'] = bb_upper
-            df['bb_middle'] = bb_middle
-            df['bb_lower'] = bb_lower
+            bb_indicator = ta.volatility.BollingerBands(df['close'], window=20, window_dev=2)
+            df['bb_upper'] = bb_indicator.bollinger_hband()
+            df['bb_middle'] = bb_indicator.bollinger_mavg()
+            df['bb_lower'] = bb_indicator.bollinger_lband()
             
             # ATR
-            df['atr'] = talib.ATR(high, low, close, timeperiod=14)
+            df['atr'] = ta.volatility.average_true_range(df['high'], df['low'], df['close'], window=14)
             
             # 成交量移动平均
-            df['volume_sma'] = talib.SMA(volume, timeperiod=20)
+            df['volume_sma'] = ta.trend.sma_indicator(df['volume'], window=20)
             
             # 存储技术指标到数据库
             self._store_technical_indicators(df, symbol)
             
             return df
             
-        except ImportError:
-            self.logger.warning("talib未安装，使用简化版技术指标计算")
-            return self._calculate_simple_indicators(df, symbol)
         except Exception as e:
-            self.logger.error(f"计算技术指标失败: {e}")
-            return df
+            self.logger.error(f"使用ta库计算技术指标失败: {e}")
+            return self._calculate_simple_indicators(df, symbol)
     
     def _calculate_simple_indicators(self, df: pd.DataFrame, symbol: str) -> pd.DataFrame:
         """简化版技术指标计算（不依赖talib）"""

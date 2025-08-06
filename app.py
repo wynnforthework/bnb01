@@ -551,6 +551,86 @@ def export_trades():
     except Exception as e:
         return jsonify({'success': False, 'message': f'导出交易记录失败: {str(e)}'})
 
+@app.route('/api/strategies/add', methods=['POST'])
+def add_strategy():
+    """添加新策略"""
+    global trading_engine
+    try:
+        if trading_engine is None:
+            trading_engine = TradingEngine()
+        
+        data = request.get_json()
+        symbol = data.get('symbol', 'BTCUSDT')
+        strategy_type = data.get('strategy_type', 'MA')
+        parameters = data.get('parameters', {})
+        
+        success = trading_engine.add_strategy(symbol, strategy_type, parameters)
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': f'策略 {symbol}_{strategy_type} 添加成功'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': '策略添加失败'
+            })
+            
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'添加策略失败: {str(e)}'})
+
+@app.route('/api/strategies/remove', methods=['POST'])
+def remove_strategy():
+    """移除策略"""
+    global trading_engine
+    try:
+        if trading_engine is None:
+            return jsonify({'success': False, 'message': '交易引擎未启动'})
+        
+        data = request.get_json()
+        strategy_key = data.get('strategy_key')
+        
+        if not strategy_key:
+            return jsonify({'success': False, 'message': '策略键不能为空'})
+        
+        success = trading_engine.remove_strategy(strategy_key)
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': f'策略 {strategy_key} 移除成功'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': '策略移除失败'
+            })
+            
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'移除策略失败: {str(e)}'})
+
+@app.route('/api/symbols/available')
+def get_available_symbols():
+    """获取可用的交易对"""
+    try:
+        # 获取Binance支持的主要交易对
+        available_symbols = [
+            'BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT',
+            'DOGEUSDT', 'SOLUSDT', 'MATICUSDT', 'DOTUSDT', 
+            'AVAXUSDT', 'LINKUSDT', 'UNIUSDT', 'LTCUSDT',
+            'ATOMUSDT', 'FILUSDT', 'XRPUSDT', 'TRXUSDT',
+            'EOSUSDT', 'XLMUSDT', 'VETUSDT', 'ICPUSDT'
+        ]
+        
+        return jsonify({
+            'success': True,
+            'symbols': available_symbols
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'获取交易对失败: {str(e)}'})
+
 @app.route('/api/config/update', methods=['POST'])
 def update_config():
     """更新系统配置"""

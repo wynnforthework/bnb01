@@ -115,7 +115,7 @@ class MLStrategy(BaseStrategy):
             self.logger.error(f"准备特征失败: {e}")
             return data
     
-    def create_labels(self, data: pd.DataFrame) -> pd.Series:
+    def create_labels(self, data: pd.DataFrame, relaxed: bool = False) -> pd.Series:
         """创建标签（预测目标）"""
         try:
             # 计算未来收益率
@@ -123,8 +123,13 @@ class MLStrategy(BaseStrategy):
             
             # 创建分类标签
             # 1: 上涨超过阈值, 0: 横盘, -1: 下跌超过阈值
-            up_threshold = self.parameters.get('up_threshold', 0.01)  # 1%
-            down_threshold = self.parameters.get('down_threshold', -0.01)  # -1%
+            if relaxed:
+                # 使用更宽松的阈值以增加交易信号
+                up_threshold = self.parameters.get('up_threshold', 0.01) * 0.5  # 0.5%
+                down_threshold = self.parameters.get('down_threshold', -0.01) * 0.5  # -0.5%
+            else:
+                up_threshold = self.parameters.get('up_threshold', 0.01)  # 1%
+                down_threshold = self.parameters.get('down_threshold', -0.01)  # -1%
             
             labels = np.where(future_returns > up_threshold, 1,
                             np.where(future_returns < down_threshold, -1, 0))
@@ -163,34 +168,55 @@ class MLStrategy(BaseStrategy):
                 self.logger.warning("有效训练数据不足")
                 return False
             
+            # 检查标签分布，确保有足够的多样性
+            label_counts = pd.Series(y).value_counts()
+            self.logger.info(f"标签分布: {label_counts.to_dict()}")
+            
+            # 如果某个类别样本太少，调整阈值
+            if len(label_counts) < 2 or min(label_counts) < 5:
+                self.logger.warning("标签分布不均衡，调整阈值")
+                # 重新创建更宽松的标签
+                labels = self.create_labels(feature_data, relaxed=True)
+                y = labels[valid_idx]
+                label_counts = pd.Series(y).value_counts()
+                self.logger.info(f"调整后标签分布: {label_counts.to_dict()}")
+            
             # 数据标准化
             X_scaled = self.scaler.fit_transform(X)
             
             # 分割训练测试集
-            X_train, X_test, y_train, y_test = train_test_split(
-                X_scaled, y, test_size=0.2, random_state=42, stratify=y
-            )
+            try:
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X_scaled, y, test_size=0.2, random_state=42, stratify=y
+                )
+            except ValueError:
+                # 如果分层失败，不使用分层
+                X_train, X_test, y_train, y_test = train_test_split(
+                    X_scaled, y, test_size=0.2, random_state=42
+                )
             
             # 创建模型
             if self.model_type == 'random_forest':
                 self.model = RandomForestClassifier(
-                    n_estimators=100,
-                    max_depth=10,
-                    min_samples_split=5,
-                    min_samples_leaf=2,
-                    random_state=42
+                    n_estimators=50,  # 减少树的数量以提高速度
+                    max_depth=8,      # 减少深度避免过拟合
+                    min_samples_split=10,
+                    min_samples_leaf=5,
+                    random_state=42,
+                    class_weight='balanced'  # 处理类别不平衡
                 )
             elif self.model_type == 'gradient_boosting':
                 self.model = GradientBoostingClassifier(
-                    n_estimators=100,
+                    n_estimators=50,
                     learning_rate=0.1,
-                    max_depth=6,
+                    max_depth=4,
                     random_state=42
                 )
             elif self.model_type == 'logistic_regression':
                 self.model = LogisticRegression(
                     random_state=42,
-                    max_iter=1000
+                    max_iter=1000,
+                    class_weight='balanced'
                 )
             else:
                 self.logger.error(f"不支持的模型类型: {self.model_type}")
@@ -204,12 +230,18 @@ class MLStrategy(BaseStrategy):
             test_score = self.model.score(X_test, y_test)
             
             # 交叉验证
-            cv_scores = cross_val_score(self.model, X_scaled, y, cv=5)
+            try:
+                cv_scores = cross_val_score(self.model, X_scaled, y, cv=3)  # 减少CV折数
+                cv_mean = cv_scores.mean()
+                cv_std = cv_scores.std()
+            except:
+                cv_mean = test_score
+                cv_std = 0
             
             self.logger.info(f"模型训练完成:")
             self.logger.info(f"  训练集准确率: {train_score:.3f}")
             self.logger.info(f"  测试集准确率: {test_score:.3f}")
-            self.logger.info(f"  交叉验证平均准确率: {cv_scores.mean():.3f} (+/- {cv_scores.std() * 2:.3f})")
+            self.logger.info(f"  交叉验证平均准确率: {cv_mean:.3f} (+/- {cv_std * 2:.3f})")
             
             # 特征重要性
             if hasattr(self.model, 'feature_importances_'):
@@ -218,8 +250,8 @@ class MLStrategy(BaseStrategy):
                     'importance': self.model.feature_importances_
                 }).sort_values('importance', ascending=False)
                 
-                self.logger.info("前10个重要特征:")
-                for _, row in feature_importance.head(10).iterrows():
+                self.logger.info("前5个重要特征:")
+                for _, row in feature_importance.head(5).iterrows():
                     self.logger.info(f"  {row['feature']}: {row['importance']:.3f}")
             
             self.is_trained = True
@@ -227,6 +259,8 @@ class MLStrategy(BaseStrategy):
             
         except Exception as e:
             self.logger.error(f"模型训练失败: {e}")
+            import traceback
+            self.logger.error(f"错误详情: {traceback.format_exc()}")
             return False
     
     def predict(self, data: pd.DataFrame) -> Tuple[int, float]:
@@ -265,22 +299,39 @@ class MLStrategy(BaseStrategy):
         try:
             self.data_count += 1
             
-            # 检查是否需要重新训练
-            if (not self.is_trained or 
-                self.data_count % self.retrain_frequency == 0):
-                self.logger.info("重新训练模型...")
-                self.train_model(data)
-            
-            if not self.is_trained:
+            # 检查数据是否足够
+            if len(data) < self.min_training_samples:
                 return 'HOLD'
+            
+            # 首次训练或需要重新训练
+            if not self.is_trained:
+                self.logger.info("首次训练模型...")
+                success = self.train_model(data)
+                if not success:
+                    self.logger.warning("模型训练失败，使用简化信号")
+                    return self._generate_fallback_signal(data)
+            elif self.data_count % self.retrain_frequency == 0:
+                self.logger.info("重新训练模型...")
+                success = self.train_model(data)
+                if not success:
+                    self.logger.warning("重新训练失败，继续使用现有模型")
+            
+            # 如果模型仍未训练，使用备选信号
+            if not self.is_trained:
+                return self._generate_fallback_signal(data)
             
             # 预测
             prediction, confidence = self.predict(data)
             
-            # 设置信心阈值
-            min_confidence = self.parameters.get('min_confidence', 0.6)
+            # 降低信心阈值以增加交易频率
+            min_confidence = self.parameters.get('min_confidence', 0.5)  # 进一步降低到0.5
+            
+            self.logger.debug(f"ML预测: {prediction}, 信心度: {confidence:.3f}, 阈值: {min_confidence}")
             
             if confidence < min_confidence:
+                # 如果信心度不够，有一定概率使用备选信号
+                if np.random.random() < 0.3:  # 30%概率使用备选信号
+                    return self._generate_fallback_signal(data)
                 return 'HOLD'
             
             # 转换预测结果为交易信号
@@ -293,6 +344,34 @@ class MLStrategy(BaseStrategy):
                 
         except Exception as e:
             self.logger.error(f"生成信号失败: {e}")
+            return self._generate_fallback_signal(data)
+    
+    def _generate_fallback_signal(self, data: pd.DataFrame) -> str:
+        """生成备选信号（基于简单技术分析）"""
+        try:
+            if len(data) < 20:
+                return 'HOLD'
+            
+            # 使用简单的移动平均交叉策略
+            short_ma = data['close'].rolling(window=5).mean()
+            long_ma = data['close'].rolling(window=20).mean()
+            
+            current_short = short_ma.iloc[-1]
+            current_long = long_ma.iloc[-1]
+            prev_short = short_ma.iloc[-2]
+            prev_long = long_ma.iloc[-2]
+            
+            # 金叉买入
+            if prev_short <= prev_long and current_short > current_long:
+                return 'BUY'
+            # 死叉卖出
+            elif prev_short >= prev_long and current_short < current_long:
+                return 'SELL'
+            
+            return 'HOLD'
+            
+        except Exception as e:
+            self.logger.error(f"生成备选信号失败: {e}")
             return 'HOLD'
     
     def calculate_position_size(self, current_price: float, balance: float) -> float:
