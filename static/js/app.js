@@ -109,6 +109,28 @@ function bindEvents() {
             compareStrategies();
         });
     }
+    
+    // 币种管理按钮
+    const showAllSymbolsBtn = document.getElementById('show-all-symbols');
+    if (showAllSymbolsBtn) {
+        showAllSymbolsBtn.addEventListener('click', function() {
+            showAllSymbols();
+        });
+    }
+    
+    const showPopularSymbolsBtn = document.getElementById('show-popular-symbols');
+    if (showPopularSymbolsBtn) {
+        showPopularSymbolsBtn.addEventListener('click', function() {
+            showPopularSymbols();
+        });
+    }
+    
+    const addCustomSymbolBtn = document.getElementById('add-custom-symbol');
+    if (addCustomSymbolBtn) {
+        addCustomSymbolBtn.addEventListener('click', function() {
+            addCustomSymbol();
+        });
+    }
 }
 
 // 加载初始数据
@@ -459,12 +481,42 @@ function updateTradesDisplay(data) {
 // 工具函数
 function showSuccess(message) {
     console.log('Success:', message);
-    // 这里可以添加toast通知
+    // 创建toast通知
+    const toast = document.createElement('div');
+    toast.className = 'alert alert-success alert-dismissible fade show position-fixed';
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    toast.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(toast);
+    
+    // 3秒后自动移除
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.parentNode.removeChild(toast);
+        }
+    }, 3000);
 }
 
 function showError(message) {
     console.error('Error:', message);
-    // 这里可以添加toast通知
+    // 创建toast通知
+    const toast = document.createElement('div');
+    toast.className = 'alert alert-danger alert-dismissible fade show position-fixed';
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    toast.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(toast);
+    
+    // 3秒后自动移除
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.parentNode.removeChild(toast);
+        }
+    }, 3000);
 }
 
 // 定期刷新数据
@@ -1052,6 +1104,9 @@ async function loadStrategiesStatus() {
 // 更新币种显示
 function updateSymbolsDisplay() {
     console.log('🔄 正在更新币种显示...');
+    console.log('当前 availableSymbols:', availableSymbols);
+    console.log('当前 selectedSymbols:', selectedSymbols);
+    
     const container = document.getElementById('symbols-container');
     if (!container) {
         console.error('❌ 找不到币种容器元素');
@@ -1078,6 +1133,7 @@ function updateSymbolsDisplay() {
     
     container.innerHTML = html;
     console.log('✅ 币种显示已更新，HTML长度:', html.length);
+    console.log('生成的HTML:', html.substring(0, 200) + '...');
     updateSymbolCount();
 }
 
@@ -1106,13 +1162,22 @@ function filterSymbols() {
 
 // 显示所有币种
 function showAllSymbols() {
-    availableSymbols = allAvailableSymbols;
+    console.log('🔍 showAllSymbols 被调用');
+    console.log('当前 allAvailableSymbols:', allAvailableSymbols);
+    console.log('当前 availableSymbols:', availableSymbols);
+    
+    availableSymbols = [...allAvailableSymbols]; // 使用展开运算符创建副本
+    console.log('更新后 availableSymbols:', availableSymbols);
+    
     updateSymbolsDisplay();
     showSuccess('已显示所有可用币种');
 }
 
 // 显示热门币种
 function showPopularSymbols() {
+    console.log('🔍 showPopularSymbols 被调用');
+    console.log('当前 allAvailableSymbols:', allAvailableSymbols);
+    
     const popularSymbols = [
         'BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT', 'DOGEUSDT', 'SOLUSDT',
         'DOTUSDT', 'AVAXUSDT', 'LINKUSDT', 'UNIUSDT', 'LTCUSDT', 'ATOMUSDT',
@@ -1122,20 +1187,48 @@ function showPopularSymbols() {
     availableSymbols = popularSymbols.filter(symbol => 
         allAvailableSymbols.includes(symbol)
     );
+    console.log('更新后 availableSymbols:', availableSymbols);
+    
     updateSymbolsDisplay();
     showSuccess('已显示热门币种');
 }
 
 // 添加自定义币种
-function addCustomSymbol() {
+async function addCustomSymbol() {
+    console.log('🔍 addCustomSymbol 被调用');
     const symbol = prompt('请输入币种代码 (例如: BTCUSDT):');
     if (symbol) {
         const upperSymbol = symbol.toUpperCase();
+        console.log('用户输入的币种:', upperSymbol);
+        
         if (upperSymbol.endsWith('USDT')) {
             if (!availableSymbols.includes(upperSymbol)) {
+                // 添加到当前显示的币种列表
                 availableSymbols.push(upperSymbol);
+                console.log('添加币种后 availableSymbols:', availableSymbols);
                 updateSymbolsDisplay();
-                showSuccess(`已添加币种: ${upperSymbol}`);
+                
+                // 同时保存到后端
+                try {
+                    const response = await fetch('/api/spot/symbols', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({symbols: availableSymbols})
+                    });
+                    
+                    const data = await response.json();
+                    if (data.success) {
+                        selectedSymbols = availableSymbols;
+                        showSuccess(`已添加币种: ${upperSymbol}`);
+                        // 重新加载策略状态
+                        await loadStrategiesStatus();
+                        updateStrategiesDisplay();
+                    } else {
+                        showError('保存币种失败: ' + data.message);
+                    }
+                } catch (error) {
+                    showError('保存币种失败: ' + error.message);
+                }
             } else {
                 showError('该币种已存在');
             }

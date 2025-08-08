@@ -93,6 +93,26 @@ def test_symbols():
     """币种管理测试页面"""
     return render_template('test_symbols_page.html')
 
+@app.route('/debug-symbols')
+def debug_symbols():
+    """币种管理调试页面"""
+    return render_template('debug_symbols.html')
+
+@app.route('/test-functions')
+def test_functions():
+    """函数测试页面"""
+    return render_template('test_functions.html')
+
+@app.route('/simple-test')
+def simple_test():
+    """简单测试页面"""
+    return render_template('simple_test.html')
+
+@app.route('/test-frontend-symbols')
+def test_frontend_symbols():
+    """前端币种管理测试页面"""
+    return render_template('test_frontend_symbols.html')
+
 @app.route('/api/account')
 def get_account():
     """获取账户信息"""
@@ -440,8 +460,9 @@ def add_strategy():
             })
         
         # 添加到现货交易引擎
-        if spot_trading_engine:
-            success = spot_trading_engine.add_strategy(symbol, strategy_type, parameters)
+        global trading_engine
+        if trading_engine:
+            success = trading_engine.add_strategy(symbol, strategy_type, parameters)
             if success:
                 return jsonify({
                     'success': True,
