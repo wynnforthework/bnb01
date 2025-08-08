@@ -39,6 +39,14 @@ spot_config = {
     'trading_status': 'stopped'
 }
 
+# 用户状态存储
+user_state = {
+    'selected_symbols': [],
+    'enabled_strategies': {},
+    'backtest_results': {},
+    'last_updated': None
+}
+
 # 初始化现货交易引擎（用于策略列表显示）
 def initialize_spot_engine():
     """初始化现货交易引擎"""
@@ -688,11 +696,11 @@ def run_strategy_backtest(symbol, strategy_type):
         return {
             'symbol': symbol,
             'strategy': strategy_type,
-            'total_return': backtest_result.get('total_return', 0.0),
-            'total_trades': backtest_result.get('total_trades', 0),
-            'win_rate': backtest_result.get('win_rate', 0.0),
-            'max_drawdown': backtest_result.get('max_drawdown', 0.0),
-            'sharpe_ratio': backtest_result.get('sharpe_ratio', 0.0),
+            'total_return': backtest_result.total_return,
+            'total_trades': backtest_result.total_trades,
+            'win_rate': backtest_result.win_rate,
+            'max_drawdown': backtest_result.max_drawdown,
+            'sharpe_ratio': backtest_result.sharpe_ratio,
             'parameters': parameters
         }
         
@@ -758,17 +766,77 @@ def manage_spot_strategies():
 @app.route('/api/spot/strategies/status')
 def get_spot_strategies_status():
     """获取现货策略状态"""
-    enabled_count = sum(spot_config['enabled_strategies'].values())
-    total_count = len(spot_config['symbols']) * len(spot_config['strategy_types'])
-    
-    return jsonify({
-        'success': True,
-        'symbols': spot_config['symbols'],
-        'enabled_strategies': spot_config['enabled_strategies'],
-        'trading_status': spot_config['trading_status'],
-        'enabled_count': enabled_count,
-        'total_count': total_count
-    })
+    try:
+        # 获取所有策略
+        strategies = {}
+        for strategy_type in spot_config['strategy_types']:
+            strategies[strategy_type] = {
+                'enabled': user_state.get('enabled_strategies', {}).get(strategy_type, False),
+                'symbols': user_state.get('selected_symbols', spot_config['symbols'])
+            }
+        
+        enabled_count = len([s for s in strategies.values() if s['enabled']])
+        total_count = len(strategies)
+        
+        return jsonify({
+            'success': True,
+            'symbols': user_state.get('selected_symbols', spot_config['symbols']),
+            'enabled_strategies': user_state.get('enabled_strategies', {}),
+            'trading_status': spot_config['trading_status'],
+            'enabled_count': enabled_count,
+            'total_count': total_count
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'获取策略状态失败: {str(e)}'
+        })
+
+@app.route('/api/user/state', methods=['GET'])
+def get_user_state():
+    """获取用户状态"""
+    try:
+        return jsonify({
+            'success': True,
+            'data': {
+                'selected_symbols': user_state.get('selected_symbols', []),
+                'enabled_strategies': user_state.get('enabled_strategies', {}),
+                'backtest_results': user_state.get('backtest_results', {}),
+                'last_updated': user_state.get('last_updated')
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'获取用户状态失败: {str(e)}'
+        })
+
+@app.route('/api/user/state', methods=['POST'])
+def save_user_state():
+    """保存用户状态"""
+    try:
+        data = request.get_json()
+        
+        if 'selected_symbols' in data:
+            user_state['selected_symbols'] = data['selected_symbols']
+        
+        if 'enabled_strategies' in data:
+            user_state['enabled_strategies'] = data['enabled_strategies']
+        
+        if 'backtest_results' in data:
+            user_state['backtest_results'] = data['backtest_results']
+        
+        user_state['last_updated'] = datetime.now().isoformat()
+        
+        return jsonify({
+            'success': True,
+            'message': '用户状态保存成功'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'保存用户状态失败: {str(e)}'
+        })
 
 @app.route('/api/spot/trading/start', methods=['POST'])
 def start_spot_trading():

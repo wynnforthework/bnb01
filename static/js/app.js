@@ -11,10 +11,26 @@ document.addEventListener('DOMContentLoaded', function () {
     checkTradingStatus();
     
     // 延迟初始化币种管理，确保页面完全加载
-    setTimeout(() => {
-        console.log('🔄 开始初始化币种管理...');
-        initializeSymbolManagement();
-    }, 500);
+setTimeout(async () => {
+    console.log('🔄 开始初始化币种管理...');
+    await initializeSymbolManagement();
+    
+    // 恢复回测结果显示
+    if (backtestResults && Object.keys(backtestResults).length > 0) {
+        console.log('🔄 恢复回测结果显示...');
+        const resultsContainer = document.getElementById('backtest-results');
+        if (resultsContainer) {
+            // 显示最新的回测结果
+            const latestResult = Object.values(backtestResults).sort((a, b) => 
+                new Date(b.timestamp) - new Date(a.timestamp)
+            )[0];
+            
+            if (latestResult) {
+                displayBacktestResults(latestResult.result, latestResult.strategyType, latestResult.symbol);
+            }
+        }
+    }
+}, 500);
 });
 
 // 初始化WebSocket连接
@@ -594,29 +610,29 @@ function displayRiskMetrics(riskData) {
     if (!container) return;
 
     const html = `
-        <div class="row">
-            <div class="col-md-3">
-                <div class="text-center">
-                    <h6 class="text-muted mb-1">总风险敞口</h6>
-                    <h5 class="text-warning">${(riskData.total_exposure || 0).toFixed(2)}%</h5>
+        <div class="columns">
+            <div class="column">
+                <div class="has-text-centered">
+                    <h6 class="has-text-grey mb-2">总风险敞口</h6>
+                    <h5 class="has-text-warning">${(riskData.total_exposure || 0).toFixed(2)}%</h5>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="text-center">
-                    <h6 class="text-muted mb-1">最大回撤</h6>
-                    <h5 class="text-danger">${(riskData.max_drawdown || 0).toFixed(2)}%</h5>
+            <div class="column">
+                <div class="has-text-centered">
+                    <h6 class="has-text-grey mb-2">最大回撤</h6>
+                    <h5 class="has-text-danger">${(riskData.max_drawdown || 0).toFixed(2)}%</h5>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="text-center">
-                    <h6 class="text-muted mb-1">夏普比率</h6>
-                    <h5 class="text-info">${(riskData.sharpe_ratio || 0).toFixed(2)}</h5>
+            <div class="column">
+                <div class="has-text-centered">
+                    <h6 class="has-text-grey mb-2">夏普比率</h6>
+                    <h5 class="has-text-info">${(riskData.sharpe_ratio || 0).toFixed(2)}</h5>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="text-center">
-                    <h6 class="text-muted mb-1">风险评级</h6>
-                    <h5 class="text-success">${riskData.risk_level || '低'}</h5>
+            <div class="column">
+                <div class="has-text-centered">
+                    <h6 class="has-text-grey mb-2">风险评级</h6>
+                    <h5 class="has-text-success">${riskData.risk_level || '低'}</h5>
                 </div>
             </div>
         </div>
@@ -651,33 +667,33 @@ function displaySystemStatus(statusData) {
     if (!container) return;
 
     const html = `
-        <div class="row">
-            <div class="col-6">
-                <div class="d-flex justify-content-between">
+        <div class="columns">
+            <div class="column is-6">
+                <div class="is-flex is-justify-content-space-between">
                     <span>API连接</span>
-                    <span class="badge ${statusData.api_connected ? 'bg-success' : 'bg-danger'}">
+                    <span class="tag ${statusData.api_connected ? 'is-success' : 'is-danger'}">
                         ${statusData.api_connected ? '正常' : '断开'}
                     </span>
                 </div>
             </div>
-            <div class="col-6">
-                <div class="d-flex justify-content-between">
+            <div class="column is-6">
+                <div class="is-flex is-justify-content-space-between">
                     <span>数据库</span>
-                    <span class="badge ${statusData.database_connected ? 'bg-success' : 'bg-danger'}">
+                    <span class="tag ${statusData.database_connected ? 'is-success' : 'is-danger'}">
                         ${statusData.database_connected ? '正常' : '异常'}
                     </span>
                 </div>
             </div>
-            <div class="col-6 mt-2">
-                <div class="d-flex justify-content-between">
+            <div class="column is-6 mt-2">
+                <div class="is-flex is-justify-content-space-between">
                     <span>内存使用</span>
-                    <span class="badge bg-info">${(statusData.memory_usage || 0).toFixed(1)}%</span>
+                    <span class="tag is-info">${(statusData.memory_usage || 0).toFixed(1)}%</span>
                 </div>
             </div>
-            <div class="col-6 mt-2">
-                <div class="d-flex justify-content-between">
+            <div class="column is-6 mt-2">
+                <div class="is-flex is-justify-content-space-between">
                     <span>运行时间</span>
-                    <span class="badge bg-secondary">${statusData.uptime || '0h'}</span>
+                    <span class="tag is-light">${statusData.uptime || '0h'}</span>
                 </div>
             </div>
         </div>
@@ -823,6 +839,18 @@ function displayBacktestResults(result, strategyType, symbol) {
     };
     
     const strategyName = strategyNames[strategyType] || strategyType;
+    
+    // 保存回测结果到全局变量
+    const resultKey = `${symbol}_${strategyType}`;
+    backtestResults[resultKey] = {
+        result: result,
+        strategyType: strategyType,
+        symbol: symbol,
+        timestamp: new Date().toISOString()
+    };
+    
+    // 保存用户状态
+    saveUserState();
     
     const html = `
         <div class="card">
@@ -1035,6 +1063,70 @@ let selectedSymbols = [];
 let enabledStrategies = {};
 let availableSymbols = [];
 let allAvailableSymbols = []; // 存储所有可用币种
+let backtestResults = {}; // 存储回测结果
+
+// 状态持久化函数
+async function saveUserState() {
+    try {
+        const response = await fetch('/api/user/state', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                selected_symbols: selectedSymbols,
+                enabled_strategies: enabledStrategies,
+                backtest_results: backtestResults
+            })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            console.log('用户状态保存成功');
+        } else {
+            console.error('保存用户状态失败:', data.message);
+        }
+    } catch (error) {
+        console.error('保存用户状态失败:', error);
+    }
+}
+
+async function loadUserState() {
+    try {
+        const response = await fetch('/api/user/state');
+        const data = await response.json();
+        
+        if (data.success) {
+            const state = data.data;
+            
+            // 恢复选中的币种
+            if (state.selected_symbols && state.selected_symbols.length > 0) {
+                selectedSymbols = state.selected_symbols;
+                console.log('恢复选中的币种:', selectedSymbols);
+            }
+            
+            // 恢复启用的策略
+            if (state.enabled_strategies) {
+                enabledStrategies = state.enabled_strategies;
+                console.log('恢复启用的策略:', enabledStrategies);
+            }
+            
+            // 恢复回测结果
+            if (state.backtest_results) {
+                backtestResults = state.backtest_results;
+                console.log('恢复回测结果:', Object.keys(backtestResults));
+            }
+            
+            // 更新显示
+            updateSymbolsDisplay();
+            updateStrategiesDisplay();
+            
+            console.log('用户状态恢复成功');
+        } else {
+            console.error('加载用户状态失败:', data.message);
+        }
+    } catch (error) {
+        console.error('加载用户状态失败:', error);
+    }
+}
 
 // 初始化币种管理
 async function initializeSymbolManagement() {
@@ -1044,6 +1136,11 @@ async function initializeSymbolManagement() {
         console.log('✅ 加载可用币种完成');
         await loadStrategiesStatus();
         console.log('✅ 加载策略状态完成');
+        
+        // 加载用户状态
+        await loadUserState();
+        console.log('✅ 加载用户状态完成');
+        
         updateSymbolsDisplay();
         console.log('✅ 更新币种显示完成');
         updateStrategiesDisplay();
@@ -1615,6 +1712,8 @@ async function saveSymbolSelection() {
         const data = await response.json();
         if (data.success) {
             selectedSymbols = selected;
+            // 保存用户状态
+            await saveUserState();
             showSuccess(data.message);
             await loadStrategiesStatus();
             updateStrategiesDisplay();
@@ -1812,6 +1911,8 @@ async function toggleStrategy(strategyKey, event) {
         const data = await response.json();
         if (data.success) {
             enabledStrategies[strategyKey] = newState;
+            // 保存用户状态
+            await saveUserState();
             updateStrategiesDisplay();
             showSuccess(data.message);
         } else {

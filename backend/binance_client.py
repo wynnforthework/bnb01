@@ -18,6 +18,15 @@ class BinanceClient:
         self.config = Config()
         self.trading_mode = trading_mode.upper()
         
+        # 配置请求参数，包括禁用代理
+        requests_params = {
+            'timeout': 30,
+            'proxies': {
+                'http': None,
+                'https': None
+            }
+        }
+        
         # 根据交易模式初始化不同的客户端
         if self.trading_mode == 'FUTURES':
             # 合约交易客户端
@@ -27,7 +36,7 @@ class BinanceClient:
                     api_key=self.config.BINANCE_API_KEY_FUTURES,
                     api_secret=self.config.BINANCE_SECRET_KEY_FUTURES,
                     testnet=True,
-                    requests_params={'timeout': 30}
+                    requests_params=requests_params
                 )
                 # 设置合约测试网端点
                 self.client.FUTURES_URL = 'https://testnet.binancefuture.com'
@@ -37,7 +46,7 @@ class BinanceClient:
                     api_key=self.config.BINANCE_API_KEY,
                     api_secret=self.config.BINANCE_SECRET_KEY,
                     testnet=False,
-                    requests_params={'timeout': 30}
+                    requests_params=requests_params
                 )
         else:
             # 现货交易客户端
@@ -45,7 +54,7 @@ class BinanceClient:
                 api_key=self.config.BINANCE_API_KEY,
                 api_secret=self.config.BINANCE_SECRET_KEY,
                 testnet=self.config.BINANCE_TESTNET,
-                requests_params={'timeout': 30}
+                requests_params=requests_params
             )
         
         self.logger = logging.getLogger(__name__)
@@ -93,11 +102,21 @@ class BinanceClient:
                     'futures_funding_rate', 'futures_mark_price'
                 ]
                 
+                # 这些API调用不需要额外参数
+                public_apis = [
+                    'get_klines', 'get_historical_klines', 'get_symbol_ticker',
+                    'futures_symbol_ticker', 'get_exchange_info'
+                ]
+                
+                # 只对需要签名的API添加参数
                 if any(api_name in func_name for api_name in signed_apis):
                     if 'timestamp' not in kwargs:
                         kwargs['timestamp'] = int(time.time() * 1000)
                     if 'recvWindow' not in kwargs:
                         kwargs['recvWindow'] = 60000
+                # 对公开API不添加任何额外参数
+                elif any(api_name in func_name for api_name in public_apis):
+                    pass  # 不添加任何参数
             
             return api_func(*args, **kwargs)
         
@@ -137,8 +156,8 @@ class BinanceClient:
     def get_klines(self, symbol, interval='1h', limit=500):
         """获取K线数据"""
         try:
-            klines = self._safe_api_call(
-                self.client.get_klines,
+            # 直接调用，不使用_safe_api_call，因为这是公开API
+            klines = self.client.get_klines(
                 symbol=symbol,
                 interval=interval,
                 limit=limit
@@ -178,10 +197,8 @@ class BinanceClient:
             if end_str:
                 kwargs['end_str'] = end_str
             
-            klines = self._safe_api_call(
-                self.client.get_historical_klines,
-                **kwargs
-            )
+            # 直接调用，不使用_safe_api_call，因为这是公开API
+            klines = self.client.get_historical_klines(**kwargs)
             
             if not klines:
                 return pd.DataFrame()
@@ -208,7 +225,15 @@ class BinanceClient:
     def _is_valid_symbol(self, symbol: str) -> bool:
         """检查交易对是否有效"""
         try:
-            exchange_info = self._safe_api_call(self.client.get_exchange_info)
+            # 使用正确的API方法名称
+            if hasattr(self.client, 'get_exchange_info'):
+                exchange_info = self.client.get_exchange_info()
+            elif hasattr(self.client, 'get_exchange_information'):
+                exchange_info = self.client.get_exchange_information()
+            else:
+                # 如果都不存在，尝试直接获取
+                exchange_info = self.client.get_exchange_info()
+            
             if exchange_info:
                 for s in exchange_info['symbols']:
                     if s['symbol'] == symbol and s['status'] == 'TRADING':
@@ -222,9 +247,11 @@ class BinanceClient:
         """获取当前价格"""
         try:
             if self.trading_mode == 'FUTURES':
-                ticker = self._safe_api_call(self.client.futures_symbol_ticker, symbol=symbol)
+                # 直接调用，不使用_safe_api_call，因为这是公开API
+                ticker = self.client.futures_symbol_ticker(symbol=symbol)
             else:
-                ticker = self._safe_api_call(self.client.get_symbol_ticker, symbol=symbol)
+                # 直接调用，不使用_safe_api_call，因为这是公开API
+                ticker = self.client.get_symbol_ticker(symbol=symbol)
             
             if ticker:
                 return float(ticker['price'])
@@ -318,7 +345,15 @@ class BinanceClient:
     def _get_symbol_info(self, symbol):
         """获取交易对信息"""
         try:
-            exchange_info = self._safe_api_call(self.client.get_exchange_info)
+            # 使用正确的API方法名称
+            if hasattr(self.client, 'get_exchange_info'):
+                exchange_info = self.client.get_exchange_info()
+            elif hasattr(self.client, 'get_exchange_information'):
+                exchange_info = self.client.get_exchange_information()
+            else:
+                # 如果都不存在，尝试直接获取
+                exchange_info = self.client.get_exchange_info()
+            
             if exchange_info:
                 for s in exchange_info['symbols']:
                     if s['symbol'] == symbol:
