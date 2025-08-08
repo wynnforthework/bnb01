@@ -1,11 +1,25 @@
 {
-  "leverage": 20,
+  "leverage": 10,
   "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "BNBUSDT",
+    "ADAUSDT"
+  ],
+  "safe_symbols": [
     "BTCUSDT",
     "ETHUSDT",
     "BNBUSDT",
     "ADAUSDT",
     "DOGEUSDT"
   ],
-  "updated_at": "2025-08-08T14:41:25.725081"
+  "avoid_symbols": [
+    "FILUSDT"
+  ],
+  "min_quantity_multiplier": 10,
+  "max_leverage": 20,
+  "default_leverage": 10,
+  "max_spread_percent": 5,
+  "min_balance_required": 50,
+  "updated_at": "2025-08-08T15:00:00.000000"
 }

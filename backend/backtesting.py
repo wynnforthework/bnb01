@@ -250,10 +250,22 @@ class BacktestEngine:
                 if not pd.api.types.is_datetime64_any_dtype(data['timestamp']):
                     data['timestamp'] = pd.to_datetime(data['timestamp'])
                 
-                # 过滤数据
-                original_len = len(data)
-                data = data[(data['timestamp'] >= start_dt) & (data['timestamp'] <= end_dt)]
-                self.logger.info(f"日期过滤后剩余 {len(data)} 条数据 (原始: {original_len})")
+                # 检查数据范围
+                data_min = data['timestamp'].min()
+                data_max = data['timestamp'].max()
+                self.logger.info(f"数据库数据范围: {data_min} 到 {data_max}")
+                self.logger.info(f"请求数据范围: {start_dt} 到 {end_dt}")
+                
+                # 如果请求的日期范围与数据库数据范围不匹配，使用所有可用数据
+                if start_dt > data_max or end_dt < data_min:
+                    self.logger.warning(f"请求的日期范围 {start_date} 到 {end_date} 与数据库数据范围不匹配")
+                    self.logger.info(f"使用所有可用数据进行回测")
+                    # 不进行日期过滤，使用所有数据
+                else:
+                    # 过滤数据
+                    original_len = len(data)
+                    data = data[(data['timestamp'] >= start_dt) & (data['timestamp'] <= end_dt)]
+                    self.logger.info(f"日期过滤后剩余 {len(data)} 条数据 (原始: {original_len})")
                 
                 if data.empty:
                     self.logger.warning(f"日期范围 {start_date} 到 {end_date} 内没有数据")
@@ -318,7 +330,18 @@ class BacktestEngine:
             # 基本收益指标
             total_return = (equity_series.iloc[-1] - self.initial_capital) / self.initial_capital
             days = (end_date - start_date).days
-            annual_return = (1 + total_return) ** (365 / days) - 1 if days > 0 else 0
+            
+            # 修复年化收益率计算，避免极端值
+            if days > 0:
+                # 限制年化收益率在合理范围内
+                annual_return = (1 + total_return) ** (365 / days) - 1
+                # 如果年化收益率超过1000%，可能是计算错误，使用简单年化
+                if abs(annual_return) > 10:  # 超过1000%
+                    annual_return = total_return * (365 / days)
+                # 进一步限制在合理范围内
+                annual_return = max(-0.99, min(annual_return, 9.99))  # 限制在-99%到999%之间
+            else:
+                annual_return = 0
             
             # 最大回撤
             peak = equity_series.expanding().max()

@@ -620,9 +620,21 @@ def update_spot_strategies():
 def run_strategy_backtest(symbol, strategy_type):
     """运行策略回测"""
     try:
-        # 获取历史数据
+        # 获取历史数据 - 使用可用的数据而不是固定的日期范围
         end_date = datetime.now()
-        start_date = end_date - timedelta(days=30)  # 30天回测
+        # 检查数据库中的实际数据范围
+        from backend.data_collector import DataCollector
+        dc = DataCollector()
+        available_data = dc.get_market_data(symbol, '1h', limit=1000)
+        
+        if available_data.empty:
+            # 如果没有数据，使用最近7天作为默认范围
+            start_date = end_date - timedelta(days=7)
+        else:
+            # 使用数据库中实际可用的数据范围
+            start_date = available_data['timestamp'].min()
+            end_date = available_data['timestamp'].max()
+            print(f"使用实际数据范围: {start_date} 到 {end_date}")
         
         # 根据策略类型创建策略实例
         if strategy_type == 'MA':
@@ -632,7 +644,17 @@ def run_strategy_backtest(symbol, strategy_type):
             strategy = RSIStrategy(symbol)
             parameters = {'period': 14, 'overbought': 70, 'oversold': 30}
         elif strategy_type == 'ML':
-            strategy = MLStrategy(symbol)
+            strategy = MLStrategy(symbol, {
+                'model_type': 'random_forest',
+                'lookback_period': 30,
+                'prediction_horizon': 1,
+                'min_confidence': 0.65,
+                'up_threshold': 0.015,
+                'down_threshold': -0.015,
+                'stop_loss': 0.03,
+                'take_profit': 0.06,
+                'position_size': 0.05
+            })
             parameters = {'model_type': 'random_forest'}
         elif strategy_type == 'Chanlun':
             # 缠论策略使用默认参数
@@ -660,7 +682,7 @@ def run_strategy_backtest(symbol, strategy_type):
             symbol=symbol,
             start_date=start_date,
             end_date=end_date,
-            parameters=parameters
+            interval='1h'
         )
         
         return {

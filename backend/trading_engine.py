@@ -59,10 +59,10 @@ class TradingEngine:
             # 设置持仓模式为双向持仓
             self.binance_client.set_position_mode(dual_side_position=True)
             
-            # 为主要交易对设置杠杆和保证金模式
-            main_symbols = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT']
+            # 使用安全交易对列表
+            safe_symbols = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT']
             
-            for symbol in main_symbols:
+            for symbol in safe_symbols:
                 try:
                     # 设置保证金模式为逐仓
                     self.binance_client.set_margin_type(symbol, 'ISOLATED')
@@ -79,6 +79,65 @@ class TradingEngine:
             
         except Exception as e:
             self.logger.error(f"初始化合约设置失败: {e}")
+    
+    def _check_liquidity(self, symbol: str) -> bool:
+        """检查交易对流动性"""
+        try:
+            order_book = self.binance_client.client.futures_order_book(symbol=symbol, limit=5)
+            bid_price = float(order_book['bids'][0][0])
+            ask_price = float(order_book['asks'][0][0])
+            spread = ask_price - bid_price
+            spread_percent = (spread / bid_price) * 100
+            
+            # 如果价差超过5%，认为流动性不足
+            if spread_percent > 5:
+                self.logger.warning(f"流动性不足 {symbol}: 价差 {spread_percent:.2f}%")
+                return False
+            
+            return True
+        except Exception as e:
+            self.logger.error(f"检查流动性失败 {symbol}: {e}")
+            return False
+    
+    def _get_safe_quantity(self, symbol: str, price: float, position_size: float = 0.02) -> float:
+        """获取安全的订单数量"""
+        try:
+            # 获取账户余额
+            account = self.binance_client.get_account_balance()
+            available_balance = float(account['availableBalance'])
+            
+            # 计算仓位价值
+            position_value = available_balance * position_size
+            
+            # 获取交易对信息
+            symbol_info = self.binance_client._get_symbol_info(symbol)
+            if symbol_info:
+                # 获取最小数量
+                min_qty = None
+                for f in symbol_info['filters']:
+                    if f['filterType'] == 'LOT_SIZE':
+                        min_qty = float(f['minQty'])
+                        break
+                
+                if min_qty:
+                    # 计算订单数量
+                    quantity = position_value * self.leverage / price
+                    
+                    # 确保数量不小于最小数量的10倍
+                    safe_min_qty = min_qty * 10
+                    if quantity < safe_min_qty:
+                        quantity = safe_min_qty
+                    
+                    self.logger.info(f"安全订单数量 {symbol}: {quantity} (最小: {safe_min_qty})")
+                    return quantity
+            
+            # 默认计算
+            quantity = position_value * self.leverage / price
+            return max(quantity, 0.001)  # 至少0.001
+            
+        except Exception as e:
+            self.logger.error(f"计算安全数量失败 {symbol}: {e}")
+            return 0.001  # 默认最小数量
     
     def _initialize_strategies(self):
         """初始化交易策略"""
@@ -660,16 +719,16 @@ class TradingEngine:
     def _execute_futures_trade(self, strategy, action, price, reason):
         """执行合约交易（支持做多和做空）"""
         try:
-            account_balance = self.binance_client.get_account_balance()
-            available_balance = float(account_balance['availableBalance'])
+            # 检查流动性
+            if not self._check_liquidity(strategy.symbol):
+                self.logger.warning(f"流动性不足，跳过交易 {strategy.symbol}")
+                return False
             
-            # 计算仓位大小
-            position_value = available_balance * strategy.parameters.get('position_size', 0.02)
-            quantity = position_value * self.leverage / price  # 考虑杠杆
+            # 获取安全的订单数量
+            quantity = self._get_safe_quantity(strategy.symbol, price, strategy.parameters.get('position_size', 0.02))
             
-            # 最小交易量检查
-            if quantity < 0.001:  # 根据交易对调整最小量
-                self.logger.warning(f"交易量太小: {quantity}, 跳过交易")
+            if quantity <= 0:
+                self.logger.warning(f"订单数量无效: {quantity}, 跳过交易")
                 return False
             
             if action == 'BUY':
