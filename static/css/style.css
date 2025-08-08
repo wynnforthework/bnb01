@@ -1,45 +1,55 @@
-/* 自定义样式 */
+/* 自定义样式 - 适配Bulma框架 */
 body {
-    background-color: #f8f9fa;
+    background-color: #f5f5f5;
 }
 
+/* 卡片样式增强 */
 .card {
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-    border: 1px solid rgba(0, 0, 0, 0.125);
+    box-shadow: 0 2px 3px rgba(10, 10, 10, 0.1), 0 0 0 1px rgba(10, 10, 10, 0.1);
+    border-radius: 6px;
 }
 
 .card-header {
     background-color: #fff;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    border-bottom: 1px solid #dbdbdb;
 }
 
+/* 表格样式 */
 .table th {
     border-top: none;
     font-weight: 600;
+    background-color: #f5f5f5;
 }
 
+.table td {
+    vertical-align: middle;
+}
+
+/* 盈亏颜色 */
 .profit-positive {
-    color: #28a745;
+    color: #48c774;
 }
 
 .profit-negative {
-    color: #dc3545;
+    color: #f14668;
 }
 
+/* 状态指示器 */
 .status-running {
-    color: #28a745;
+    color: #48c774;
 }
 
 .status-stopped {
-    color: #dc3545;
+    color: #f14668;
 }
 
+/* 余额项目样式 */
 .balance-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 0.5rem 0;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid #dbdbdb;
 }
 
 .balance-item:last-child {
@@ -54,17 +64,19 @@ body {
     font-family: 'Courier New', monospace;
 }
 
+/* 投资组合指标 */
 .portfolio-metric {
     text-align: center;
     padding: 1rem;
-    border: 1px solid #eee;
-    border-radius: 0.375rem;
+    border: 1px solid #dbdbdb;
+    border-radius: 6px;
     margin-bottom: 1rem;
+    background-color: #fff;
 }
 
 .portfolio-metric h6 {
     margin-bottom: 0.5rem;
-    color: #6c757d;
+    color: #7a7a7a;
 }
 
 .portfolio-metric .value {
@@ -72,23 +84,34 @@ body {
     font-weight: 600;
 }
 
-.btn-group-sm > .btn {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.875rem;
+/* 按钮组样式 */
+.buttons .button {
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
 }
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-    .container-fluid {
+    .container {
         padding: 0 10px;
     }
     
-    .card-body {
+    .card-content {
         padding: 1rem;
     }
     
-    .table-responsive {
+    .table-container {
         font-size: 0.875rem;
+    }
+    
+    .buttons {
+        flex-direction: column;
+    }
+    
+    .buttons .button {
+        width: 100%;
+        margin-right: 0;
+        margin-bottom: 0.5rem;
     }
 }
 
@@ -101,27 +124,14 @@ body {
 }
 
 /* 图表容器 */
-#price-chart {
+#price-chart, #futures-price-chart {
     width: 100%;
     height: 400px;
 }
 
-/* 状态指示器 */
-.status-indicator {
-    display: inline-block;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    margin-right: 5px;
-}
-
-.status-running .status-indicator {
-    background-color: #28a745;
+/* 状态指示器动画 */
+.status-running .icon {
     animation: pulse 2s infinite;
-}
-
-.status-stopped .status-indicator {
-    background-color: #dc3545;
 }
 
 @keyframes pulse {
@@ -134,33 +144,26 @@ body {
     100% {
         opacity: 1;
     }
-}/*
- 新增样式 */
+}
 
 /* 策略面板 */
 .strategy-panel {
     min-height: 300px;
 }
 
-.btn-group .btn.active {
-    background-color: #007bff;
-    color: white;
-    border-color: #007bff;
-}
-
 /* 风险指标 */
 .risk-metric {
     text-align: center;
     padding: 1rem;
-    border: 1px solid #eee;
-    border-radius: 0.375rem;
+    border: 1px solid #dbdbdb;
+    border-radius: 6px;
     margin-bottom: 1rem;
-    background: #f8f9fa;
+    background: #f5f5f5;
 }
 
 .risk-metric h6 {
     margin-bottom: 0.5rem;
-    color: #6c757d;
+    color: #7a7a7a;
     font-size: 0.875rem;
 }
 
@@ -176,7 +179,7 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 0.5rem 0;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid #dbdbdb;
 }
 
 .status-item:last-child {
@@ -184,7 +187,7 @@ body {
 }
 
 /* 警告样式 */
-.alert-sm {
+.notification.is-light {
     padding: 0.5rem 0.75rem;
     margin-bottom: 0.5rem;
     font-size: 0.875rem;
@@ -195,7 +198,7 @@ body {
     display: flex;
     justify-content: space-between;
     padding: 0.25rem 0;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid #dbdbdb;
 }
 
 .backtest-metric:last-child {
@@ -203,9 +206,8 @@ body {
 }
 
 /* 表格增强 */
-.table-sm td {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.875rem;
+.table.is-striped tbody tr:nth-child(even) {
+    background-color: #fafafa;
 }
 
 /* 数据收集状态 */
@@ -225,15 +227,20 @@ body {
 }
 
 /* 按钮组增强 */
-.btn-group-enhanced {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
+.buttons.has-addons .button:not(:last-child) {
+    border-right: 0;
 }
 
-.btn-group-enhanced .btn {
-    flex: 1;
-    min-width: 120px;
+.buttons.has-addons .button:not(:first-child) {
+    border-radius: 0;
+}
+
+.buttons.has-addons .button:first-child {
+    border-radius: 4px 0 0 4px;
+}
+
+.buttons.has-addons .button:last-child {
+    border-radius: 0 4px 4px 0;
 }
 
 /* 指标卡片 */
@@ -260,7 +267,7 @@ body {
 .progress-custom {
     height: 8px;
     border-radius: 4px;
-    background-color: #e9ecef;
+    background-color: #dbdbdb;
 }
 
 .progress-custom .progress-bar {
@@ -279,11 +286,11 @@ body {
 
 /* 响应式增强 */
 @media (max-width: 992px) {
-    .btn-group-enhanced {
+    .buttons {
         flex-direction: column;
     }
     
-    .btn-group-enhanced .btn {
+    .buttons .button {
         min-width: auto;
     }
     
@@ -301,21 +308,21 @@ body {
 }
 
 @media (max-width: 768px) {
-    .card-body {
+    .card-content {
         padding: 0.75rem;
     }
     
-    .table-responsive {
+    .table-container {
         font-size: 0.8rem;
     }
     
-    .btn-group {
+    .buttons {
         flex-direction: column;
         width: 100%;
     }
     
-    .btn-group .btn {
-        border-radius: 0.375rem !important;
+    .buttons .button {
+        border-radius: 4px !important;
         margin-bottom: 0.25rem;
     }
 }
@@ -354,7 +361,7 @@ body {
     bottom: 100%;
     left: 50%;
     transform: translateX(-50%);
-    background: #333;
+    background: #363636;
     color: white;
     padding: 0.5rem;
     border-radius: 4px;
@@ -379,20 +386,20 @@ body {
 
 /* 成功/错误消息 */
 .message-success {
-    color: #28a745;
-    background: #d4edda;
-    border: 1px solid #c3e6cb;
+    color: #48c774;
+    background: #effaf3;
+    border: 1px solid #c8e6c9;
     padding: 0.75rem;
-    border-radius: 0.375rem;
+    border-radius: 4px;
     margin: 0.5rem 0;
 }
 
 .message-error {
-    color: #dc3545;
-    background: #f8d7da;
+    color: #f14668;
+    background: #feecf0;
     border: 1px solid #f5c6cb;
     padding: 0.75rem;
-    border-radius: 0.375rem;
+    border-radius: 4px;
     margin: 0.5rem 0;
 }
 
@@ -406,11 +413,11 @@ body {
 }
 
 .data-table .positive {
-    color: #28a745;
+    color: #48c774;
 }
 
 .data-table .negative {
-    color: #dc3545;
+    color: #f14668;
 }
 
 /* 图标增强 */
@@ -419,17 +426,198 @@ body {
 }
 
 .icon-success {
-    color: #28a745;
+    color: #48c774;
 }
 
 .icon-warning {
-    color: #ffc107;
+    color: #ffdd57;
 }
 
 .icon-danger {
-    color: #dc3545;
+    color: #f14668;
 }
 
 .icon-info {
-    color: #17a2b8;
+    color: #3298dc;
+}
+
+/* 模态框增强 */
+.modal-card {
+    max-width: 90vw;
+}
+
+.modal-card-body {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+/* 表单增强 */
+.field .help {
+    margin-top: 0.25rem;
+}
+
+.field .label {
+    margin-bottom: 0.5rem;
+}
+
+/* 选择框增强 */
+.select.is-fullwidth select {
+    width: 100%;
+}
+
+.select.is-multiple select {
+    height: auto;
+    min-height: 100px;
+}
+
+/* 通知增强 */
+.notification.is-light {
+    background-color: #f5f5f5;
+    color: #4a4a4a;
+}
+
+.notification.is-info.is-light {
+    background-color: #eff5fb;
+    color: #12537e;
+}
+
+.notification.is-warning.is-light {
+    background-color: #fffbeb;
+    color: #946c00;
+}
+
+.notification.is-danger.is-light {
+    background-color: #feecf0;
+    color: #cc0f35;
+}
+
+.notification.is-success.is-light {
+    background-color: #effaf3;
+    color: #0a5a2c;
+}
+
+/* 标签增强 */
+.tag.is-light {
+    background-color: #f5f5f5;
+    color: #7a7a7a;
+}
+
+/* 按钮增强 */
+.button.is-outlined {
+    background-color: transparent;
+}
+
+.button.is-outlined.is-primary {
+    border-color: #00d1b2;
+    color: #00d1b2;
+}
+
+.button.is-outlined.is-info {
+    border-color: #3298dc;
+    color: #3298dc;
+}
+
+.button.is-outlined.is-success {
+    border-color: #48c774;
+    color: #48c774;
+}
+
+.button.is-outlined.is-warning {
+    border-color: #ffdd57;
+    color: #b8860b;
+}
+
+.button.is-outlined.is-danger {
+    border-color: #f14668;
+    color: #f14668;
+}
+
+/* 导航栏增强 */
+.navbar.is-primary {
+    background-color: #00d1b2;
+    color: #fff;
+}
+
+.navbar.is-warning {
+    background-color: #ffdd57;
+    color: #4a4a4a;
+}
+
+.navbar-item.is-active {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* 卡片增强 */
+.card-header-title {
+    color: #4a4a4a;
+    font-weight: 600;
+}
+
+.card-header-icon {
+    color: #7a7a7a;
+}
+
+/* 表格增强 */
+.table.is-fullwidth {
+    width: 100%;
+}
+
+.table.is-striped tbody tr:nth-child(even) {
+    background-color: #fafafa;
+}
+
+.table.is-hoverable tbody tr:hover {
+    background-color: #f5f5f5;
+}
+
+/* 输入框增强 */
+.input:focus, .textarea:focus, .select select:focus {
+    border-color: #00d1b2;
+    box-shadow: 0 0 0 0.125em rgba(0, 209, 178, 0.25);
+}
+
+/* 选择框增强 */
+.select select:focus {
+    border-color: #00d1b2;
+    box-shadow: 0 0 0 0.125em rgba(0, 209, 178, 0.25);
+}
+
+/* 按钮焦点状态 */
+.button:focus {
+    box-shadow: 0 0 0 0.125em rgba(0, 209, 178, 0.25);
+}
+
+/* 响应式文本 */
+@media (max-width: 768px) {
+    .title.is-4 {
+        font-size: 1.25rem;
+    }
+    
+    .title.is-6 {
+        font-size: 1rem;
+    }
+    
+    .subtitle.is-6 {
+        font-size: 0.875rem;
+    }
+}
+
+/* 自定义滚动条 */
+.table-container::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.table-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
 }
