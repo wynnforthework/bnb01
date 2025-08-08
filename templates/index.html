@@ -283,7 +283,7 @@
                                 </div>
                                 <div class="column is-6">
                                     <div class="buttons">
-                                        <button class="button is-small is-outlined" id="show-all-symbols">
+                                        <button class="button is-small is-outlined is-primary" id="show-all-symbols">
                                             <span class="icon">
                                                 <i class="fas fa-list"></i>
                                             </span>
@@ -300,6 +300,12 @@
                                                 <i class="fas fa-plus"></i>
                                             </span>
                                             <span>添加币种</span>
+                                        </button>
+                                        <button class="button is-small is-outlined is-danger" id="delete-custom-symbol">
+                                            <span class="icon">
+                                                <i class="fas fa-minus"></i>
+                                            </span>
+                                            <span>删除币种</span>
                                         </button>
                                     </div>
                                 </div>
@@ -318,7 +324,7 @@
                                         </span>
                                         <span>全选</span>
                                     </button>
-                                    <button class="button is-small is-outlined" onclick="clearAllSymbols()">
+                                    <button class="button is-small is-outlined is-danger" onclick="clearAllSymbols()">
                                         <span class="icon">
                                             <i class="fas fa-times"></i>
                                         </span>

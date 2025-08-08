@@ -505,6 +505,13 @@ body {
 /* 按钮增强 */
 .button.is-outlined {
     background-color: transparent;
+    border-color: #7a7a7a;
+    color: #7a7a7a;
+}
+
+.button.is-outlined:hover {
+    background-color: #7a7a7a;
+    color: #fff;
 }
 
 .button.is-outlined.is-primary {

@@ -4,6 +4,8 @@ import pandas as pd
 import logging
 from typing import Dict, Optional, Union
 from config.config import Config
+from backend.network_config import binance_network_config
+import time
 
 class BinanceClient:
     def __init__(self, trading_mode='SPOT'):
@@ -24,7 +26,8 @@ class BinanceClient:
                 self.client = Client(
                     api_key=self.config.BINANCE_API_KEY_FUTURES,
                     api_secret=self.config.BINANCE_SECRET_KEY_FUTURES,
-                    testnet=True
+                    testnet=True,
+                    requests_params={'timeout': 30}
                 )
                 # 设置合约测试网端点
                 self.client.FUTURES_URL = 'https://testnet.binancefuture.com'
@@ -33,14 +36,16 @@ class BinanceClient:
                 self.client = Client(
                     api_key=self.config.BINANCE_API_KEY,
                     api_secret=self.config.BINANCE_SECRET_KEY,
-                    testnet=False
+                    testnet=False,
+                    requests_params={'timeout': 30}
                 )
         else:
             # 现货交易客户端
             self.client = Client(
                 api_key=self.config.BINANCE_API_KEY,
                 api_secret=self.config.BINANCE_SECRET_KEY,
-                testnet=self.config.BINANCE_TESTNET
+                testnet=self.config.BINANCE_TESTNET,
+                requests_params={'timeout': 30}
             )
         
         self.logger = logging.getLogger(__name__)
@@ -71,10 +76,41 @@ class BinanceClient:
         except Exception as e:
             self.logger.error(f"API连接验证异常: {e}")
     
+    def _safe_api_call(self, api_func, *args, **kwargs):
+        """安全的API调用，带重试机制"""
+        def api_wrapper():
+            # 只对需要签名的API调用添加时间戳和recvWindow参数
+            if hasattr(api_func, '__name__'):
+                func_name = api_func.__name__
+                # 这些API调用需要签名参数
+                signed_apis = [
+                    'get_account', 'get_asset_balance', 'get_open_orders', 
+                    'cancel_order', 'order_market', 'order_limit',
+                    'futures_account', 'futures_position_information',
+                    'futures_change_leverage', 'futures_change_margin_type',
+                    'futures_change_position_mode', 'futures_create_order',
+                    'futures_get_open_orders', 'futures_cancel_order',
+                    'futures_funding_rate', 'futures_mark_price'
+                ]
+                
+                if any(api_name in func_name for api_name in signed_apis):
+                    if 'timestamp' not in kwargs:
+                        kwargs['timestamp'] = int(time.time() * 1000)
+                    if 'recvWindow' not in kwargs:
+                        kwargs['recvWindow'] = 60000
+            
+            return api_func(*args, **kwargs)
+        
+        try:
+            return binance_network_config.retry_with_backoff(api_wrapper)
+        except Exception as e:
+            self.logger.error(f"API调用失败: {e}")
+            return None
+    
     def get_account_info(self):
         """获取账户信息"""
         try:
-            return self.client.get_account()
+            return self._safe_api_call(self.client.get_account)
         except BinanceAPIException as e:
             self.logger.error(f"获取账户信息失败: {e}")
             return None
@@ -84,14 +120,15 @@ class BinanceClient:
         try:
             if self.trading_mode == 'FUTURES':
                 # 合约账户余额
-                account = self.client.futures_account()
-                for balance in account['assets']:
-                    if balance['asset'] == asset:
-                        return float(balance['availableBalance'])
+                account = self._safe_api_call(self.client.futures_account)
+                if account:
+                    for balance in account['assets']:
+                        if balance['asset'] == asset:
+                            return float(balance['availableBalance'])
                 return 0.0
             else:
                 # 现货账户余额
-                balance = self.client.get_asset_balance(asset=asset)
+                balance = self._safe_api_call(self.client.get_asset_balance, asset=asset)
                 return float(balance['free']) if balance else 0.0
         except BinanceAPIException as e:
             self.logger.error(f"获取余额失败: {e}")
@@ -100,34 +137,17 @@ class BinanceClient:
     def get_klines(self, symbol, interval='1h', limit=500):
         """获取K线数据"""
         try:
-            # 验证交易对格式
-            if not symbol or not isinstance(symbol, str):
-                self.logger.error(f"无效的交易对格式: {symbol}")
-                return pd.DataFrame()
-            
-            # 验证交易对是否有效
-            if not self._is_valid_symbol(symbol):
-                self.logger.error(f"无效的交易对: {symbol}")
-                return pd.DataFrame()
-            
-            # 根据交易模式选择API
-            if self.trading_mode == 'FUTURES':
-                klines = self.client.futures_klines(
-                    symbol=symbol,
-                    interval=interval,
-                    limit=limit
-                )
-            else:
-                klines = self.client.get_klines(
-                    symbol=symbol,
-                    interval=interval,
-                    limit=limit
-                )
+            klines = self._safe_api_call(
+                self.client.get_klines,
+                symbol=symbol,
+                interval=interval,
+                limit=limit
+            )
             
             if not klines:
-                self.logger.warning(f"没有获取到 {symbol} 的K线数据")
                 return pd.DataFrame()
             
+            # 转换为DataFrame
             df = pd.DataFrame(klines, columns=[
                 'timestamp', 'open', 'high', 'low', 'close', 'volume',
                 'close_time', 'quote_asset_volume', 'number_of_trades',
@@ -143,43 +163,72 @@ class BinanceClient:
             return df
             
         except BinanceAPIException as e:
-            if "Invalid symbol" in str(e):
-                self.logger.error(f"无效的交易对 {symbol}: {e}")
-            else:
-                self.logger.error(f"获取K线数据失败 {symbol}: {e}")
+            self.logger.error(f"获取K线数据失败: {e}")
             return pd.DataFrame()
-        except Exception as e:
-            self.logger.error(f"获取K线数据异常 {symbol}: {e}")
+    
+    def get_historical_klines(self, symbol, interval, start_str, end_str=None, limit=1000):
+        """获取历史K线数据"""
+        try:
+            kwargs = {
+                'symbol': symbol,
+                'interval': interval,
+                'start_str': start_str,
+                'limit': limit
+            }
+            if end_str:
+                kwargs['end_str'] = end_str
+            
+            klines = self._safe_api_call(
+                self.client.get_historical_klines,
+                **kwargs
+            )
+            
+            if not klines:
+                return pd.DataFrame()
+            
+            # 转换为DataFrame
+            df = pd.DataFrame(klines, columns=[
+                'timestamp', 'open', 'high', 'low', 'close', 'volume',
+                'close_time', 'quote_asset_volume', 'number_of_trades',
+                'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ignore'
+            ])
+            
+            # 转换数据类型
+            numeric_columns = ['open', 'high', 'low', 'close', 'volume']
+            for col in numeric_columns:
+                df[col] = pd.to_numeric(df[col])
+            
+            df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+            return df
+            
+        except BinanceAPIException as e:
+            self.logger.error(f"获取历史K线数据失败: {e}")
             return pd.DataFrame()
     
     def _is_valid_symbol(self, symbol: str) -> bool:
-        """验证交易对是否有效"""
+        """检查交易对是否有效"""
         try:
-            # 基本格式检查
-            if not symbol.endswith('USDT') and not symbol.endswith('BTC') and not symbol.endswith('ETH'):
-                return False
-            
-            # 长度检查
-            if len(symbol) < 6 or len(symbol) > 12:
-                return False
-            
-            # 字符检查
-            if not symbol.isalnum() or not symbol.isupper():
-                return False
-            
-            return True
-            
-        except Exception:
+            exchange_info = self._safe_api_call(self.client.get_exchange_info)
+            if exchange_info:
+                for s in exchange_info['symbols']:
+                    if s['symbol'] == symbol and s['status'] == 'TRADING':
+                        return True
+            return False
+        except Exception as e:
+            self.logger.error(f"检查交易对有效性失败: {e}")
             return False
     
     def get_ticker_price(self, symbol):
         """获取当前价格"""
         try:
             if self.trading_mode == 'FUTURES':
-                ticker = self.client.futures_symbol_ticker(symbol=symbol)
+                ticker = self._safe_api_call(self.client.futures_symbol_ticker, symbol=symbol)
             else:
-                ticker = self.client.get_symbol_ticker(symbol=symbol)
-            return float(ticker['price'])
+                ticker = self._safe_api_call(self.client.get_symbol_ticker, symbol=symbol)
+            
+            if ticker:
+                return float(ticker['price'])
+            return None
         except BinanceAPIException as e:
             self.logger.error(f"获取价格失败: {e}")
             return None
@@ -219,7 +268,7 @@ class BinanceClient:
                     if reduce_only:
                         order_params['reduceOnly'] = True
                     
-                    order = self.client.futures_create_order(**order_params)
+                    order = self._safe_api_call(self.client.futures_create_order, **order_params)
                 else:
                     # 构建限价单参数
                     order_params = {
@@ -236,24 +285,27 @@ class BinanceClient:
                     if reduce_only:
                         order_params['reduceOnly'] = True
                     
-                    order = self.client.futures_create_order(**order_params)
+                    order = self._safe_api_call(self.client.futures_create_order, **order_params)
             else:
                 # 现货交易
                 if order_type == 'MARKET':
-                    order = self.client.order_market(
+                    order = self._safe_api_call(
+                        self.client.order_market,
                         symbol=symbol,
                         side=side,
                         quantity=quantity
                     )
                 else:
-                    order = self.client.order_limit(
+                    order = self._safe_api_call(
+                        self.client.order_limit,
                         symbol=symbol,
                         side=side,
                         quantity=quantity,
                         price=price
                     )
             
-            self.logger.info(f"订单成功: {order.get('orderId', 'N/A')}")
+            if order:
+                self.logger.info(f"订单成功: {order.get('orderId', 'N/A')}")
             return order
             
         except BinanceAPIException as e:
@@ -266,10 +318,11 @@ class BinanceClient:
     def _get_symbol_info(self, symbol):
         """获取交易对信息"""
         try:
-            exchange_info = self.client.get_exchange_info()
-            for s in exchange_info['symbols']:
-                if s['symbol'] == symbol:
-                    return s
+            exchange_info = self._safe_api_call(self.client.get_exchange_info)
+            if exchange_info:
+                for s in exchange_info['symbols']:
+                    if s['symbol'] == symbol:
+                        return s
             return None
         except Exception as e:
             self.logger.error(f"获取交易对信息失败: {e}")
@@ -337,9 +390,9 @@ class BinanceClient:
         """获取未成交订单"""
         try:
             if self.trading_mode == 'FUTURES':
-                return self.client.futures_get_open_orders(symbol=symbol)
+                return self._safe_api_call(self.client.futures_get_open_orders, symbol=symbol)
             else:
-                return self.client.get_open_orders(symbol=symbol)
+                return self._safe_api_call(self.client.get_open_orders, symbol=symbol)
         except BinanceAPIException as e:
             self.logger.error(f"获取订单失败: {e}")
             return []
@@ -348,48 +401,89 @@ class BinanceClient:
         """取消订单"""
         try:
             if self.trading_mode == 'FUTURES':
-                return self.client.futures_cancel_order(symbol=symbol, orderId=order_id)
+                return self._safe_api_call(self.client.futures_cancel_order, symbol=symbol, orderId=order_id)
             else:
-                return self.client.cancel_order(symbol=symbol, orderId=order_id)
+                return self._safe_api_call(self.client.cancel_order, symbol=symbol, orderId=order_id)
         except BinanceAPIException as e:
             self.logger.error(f"取消订单失败: {e}")
             return None
     
     # ========== 合约交易专用方法 ==========
     
+    def get_leverage(self, symbol: str):
+        """获取当前杠杆倍数"""
+        if self.trading_mode != 'FUTURES':
+            return None
+        
+        try:
+            positions = self._safe_api_call(self.client.futures_position_information, symbol=symbol)
+            if positions and len(positions) > 0:
+                return int(positions[0].get('leverage', 1))
+            return None
+        except BinanceAPIException as e:
+            self.logger.error(f"获取杠杆倍数失败: {e}")
+            return None
+
     def set_leverage(self, symbol: str, leverage: int):
         """设置杠杆倍数"""
         if self.trading_mode != 'FUTURES':
             self.logger.warning("只有合约交易支持杠杆设置")
             return None
         
+        # 先检查当前杠杆倍数
+        current_leverage = self.get_leverage(symbol)
+        if current_leverage == leverage:
+            # 已经是目标杠杆，无需设置
+            return True
+        
         try:
-            result = self.client.futures_change_leverage(
-                symbol=symbol,
-                leverage=leverage
-            )
+            # 直接调用API，不使用_safe_api_call来避免错误日志
+            result = self.client.futures_change_leverage(symbol=symbol, leverage=leverage)
             self.logger.info(f"设置杠杆 {symbol}: {leverage}x")
             return result
         except BinanceAPIException as e:
-            self.logger.error(f"设置杠杆失败: {e}")
-            return None
+            if "Leverage reduction is not supported in Isolated Margin Mode with open positions" in str(e):
+                # 静默处理，不记录日志，因为这是正常情况（有持仓时无法降低杠杆）
+                self.logger.info(f"杠杆设置跳过 {symbol}: 有持仓时无法降低杠杆")
+                return True
+            else:
+                self.logger.error(f"设置杠杆失败: {e}")
+                return None
     
+    def get_margin_type(self, symbol: str):
+        """获取当前保证金模式"""
+        if self.trading_mode != 'FUTURES':
+            return None
+        
+        try:
+            positions = self._safe_api_call(self.client.futures_position_information, symbol=symbol)
+            if positions and len(positions) > 0:
+                return positions[0].get('marginType', 'CROSSED')
+            return None
+        except BinanceAPIException as e:
+            self.logger.error(f"获取保证金模式失败: {e}")
+            return None
+
     def set_margin_type(self, symbol: str, margin_type: str = 'ISOLATED'):
         """设置保证金模式"""
         if self.trading_mode != 'FUTURES':
             self.logger.warning("只有合约交易支持保证金模式设置")
             return None
         
+        # 先检查当前保证金模式
+        current_margin_type = self.get_margin_type(symbol)
+        if current_margin_type == margin_type:
+            # 已经是目标模式，无需设置
+            return True
+        
         try:
-            result = self.client.futures_change_margin_type(
-                symbol=symbol,
-                marginType=margin_type  # ISOLATED 或 CROSSED
-            )
+            # 直接调用API，不使用_safe_api_call来避免错误日志
+            result = self.client.futures_change_margin_type(symbol=symbol, marginType=margin_type)
             self.logger.info(f"设置保证金模式 {symbol}: {margin_type}")
             return result
         except BinanceAPIException as e:
             if "No need to change margin type" in str(e):
-                self.logger.info(f"保证金模式已经是 {margin_type}")
+                # 静默处理，不记录日志，因为这是正常情况
                 return True
             else:
                 self.logger.error(f"设置保证金模式失败: {e}")
@@ -402,7 +496,7 @@ class BinanceClient:
             return []
         
         try:
-            positions = self.client.futures_position_information()
+            positions = self._safe_api_call(self.client.futures_position_information)
             # 只返回有持仓的交易对
             active_positions = []
             for pos in positions:
@@ -417,7 +511,7 @@ class BinanceClient:
         """获取账户余额详情"""
         try:
             if self.trading_mode == 'FUTURES':
-                account = self.client.futures_account()
+                account = self._safe_api_call(self.client.futures_account)
                 return {
                     'totalWalletBalance': float(account['totalWalletBalance']),
                     'totalUnrealizedProfit': float(account['totalUnrealizedProfit']),
@@ -430,7 +524,7 @@ class BinanceClient:
                     'positions': account['positions']
                 }
             else:
-                account = self.client.get_account()
+                account = self._safe_api_call(self.client.get_account)
                 total_btc = float(account['totalAssetOfBtc'])
                 balances = []
                 for balance in account['balances']:
@@ -500,15 +594,14 @@ class BinanceClient:
             return None
         
         try:
-            result = self.client.futures_change_position_mode(
-                dualSidePosition=dual_side_position
-            )
+            # 直接调用API，不使用_safe_api_call来避免错误日志
+            result = self.client.futures_change_position_mode(dualSidePosition=dual_side_position)
             mode = "双向持仓" if dual_side_position else "单向持仓"
             self.logger.info(f"设置持仓模式: {mode}")
             return result
         except BinanceAPIException as e:
             if "No need to change position side" in str(e):
-                self.logger.info("持仓模式无需更改")
+                # 静默处理，不记录日志，因为这是正常情况
                 return True
             else:
                 self.logger.error(f"设置持仓模式失败: {e}")
@@ -521,7 +614,7 @@ class BinanceClient:
             return None
         
         try:
-            funding_rate = self.client.futures_funding_rate(symbol=symbol, limit=1)
+            funding_rate = self._safe_api_call(self.client.futures_funding_rate, symbol=symbol, limit=1)
             if funding_rate:
                 return {
                     'symbol': funding_rate[0]['symbol'],
@@ -540,7 +633,7 @@ class BinanceClient:
             return None
         
         try:
-            mark_price = self.client.futures_mark_price(symbol=symbol)
+            mark_price = self._safe_api_call(self.client.futures_mark_price, symbol=symbol)
             return {
                 'symbol': mark_price['symbol'],
                 'markPrice': float(mark_price['markPrice']),

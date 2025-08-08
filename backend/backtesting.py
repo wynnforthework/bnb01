@@ -271,7 +271,7 @@ class BacktestEngine:
                     self.logger.warning(f"日期范围 {start_date} 到 {end_date} 内没有数据")
                     # 如果指定日期范围内没有数据，返回最近的数据
                     data = self.data_collector.get_market_data(symbol, interval, limit=500)
-                    if not data.empty:
+                    if len(data) > 0:
                         self.logger.info(f"使用最近的 {len(data)} 条数据进行回测")
                 
             except Exception as filter_error:

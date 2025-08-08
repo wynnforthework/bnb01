@@ -64,13 +64,16 @@ class TradingEngine:
             
             for symbol in safe_symbols:
                 try:
-                    # 设置保证金模式为逐仓
-                    self.binance_client.set_margin_type(symbol, 'ISOLATED')
+                    # 设置保证金模式为逐仓（静默处理已设置的情况）
+                    margin_result = self.binance_client.set_margin_type(symbol, 'ISOLATED')
                     
                     # 设置杠杆
-                    self.binance_client.set_leverage(symbol, self.leverage)
+                    leverage_result = self.binance_client.set_leverage(symbol, self.leverage)
                     
-                    self.logger.info(f"合约设置完成 {symbol}: {self.leverage}x 逐仓")
+                    if margin_result and leverage_result:
+                        self.logger.info(f"合约设置完成 {symbol}: {self.leverage}x 逐仓")
+                    else:
+                        self.logger.warning(f"合约设置部分失败 {symbol}")
                     
                 except Exception as e:
                     self.logger.warning(f"设置合约参数失败 {symbol}: {e}")

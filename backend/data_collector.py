@@ -7,9 +7,11 @@ import logging
 from typing import Dict, List, Optional
 from backend.binance_client import BinanceClient
 from backend.database import DatabaseManager
+from backend.network_config import binance_network_config
 from sqlalchemy import Column, Integer, String, Float, DateTime, Text, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 import json
+import time
 
 Base = declarative_base()
 
@@ -84,40 +86,25 @@ class DataCollector:
             start_time = datetime.now() - timedelta(days=days)
             
             # 获取K线数据
-            klines = self.binance_client.client.get_historical_klines(
+            klines = self.binance_client.get_historical_klines(
                 symbol=symbol,
                 interval=interval,
                 start_str=start_time.strftime('%Y-%m-%d'),
                 limit=1000
             )
             
-            if not klines:
+            if klines.empty:
                 return pd.DataFrame()
             
             # 转换为DataFrame
-            df = pd.DataFrame(klines, columns=[
-                'timestamp', 'open', 'high', 'low', 'close', 'volume',
-                'close_time', 'quote_asset_volume', 'number_of_trades',
-                'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ignore'
-            ])
+            df = klines.copy()
             
-            # 数据类型转换
-            numeric_columns = ['open', 'high', 'low', 'close', 'volume', 'quote_asset_volume']
+            # 转换数据类型
+            numeric_columns = ['open', 'high', 'low', 'close', 'volume']
             for col in numeric_columns:
                 df[col] = pd.to_numeric(df[col])
             
-            # 转换其他数值列
-            df['taker_buy_base_asset_volume'] = pd.to_numeric(df['taker_buy_base_asset_volume'])
-            df['taker_buy_quote_asset_volume'] = pd.to_numeric(df['taker_buy_quote_asset_volume'])
-            df['ignore'] = pd.to_numeric(df['ignore'])
-            
             df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
-            df['number_of_trades'] = df['number_of_trades'].astype(int)
-            
-            # 存储到数据库
-            await self._store_market_data(df, symbol, interval)
-            
-            self.logger.info(f"收集了 {len(df)} 条 {symbol} 的历史数据")
             return df
             
         except Exception as e:
@@ -127,39 +114,34 @@ class DataCollector:
     async def collect_orderbook_data(self, symbol: str, limit: int = 100) -> Dict:
         """收集订单簿数据"""
         try:
-            orderbook = self.binance_client.client.get_order_book(
-                symbol=symbol, 
-                limit=limit
-            )
+            # 使用安全的API调用
+            def get_orderbook():
+                return self.binance_client.client.get_order_book(symbol=symbol, limit=limit)
+            
+            orderbook = binance_network_config.retry_with_backoff(get_orderbook)
+            
+            if not orderbook:
+                return {}
             
             # 计算深度
-            bids = [[float(price), float(qty)] for price, qty in orderbook['bids']]
-            asks = [[float(price), float(qty)] for price, qty in orderbook['asks']]
+            bid_depth = sum(float(bid[1]) for bid in orderbook['bids'][:10])
+            ask_depth = sum(float(ask[1]) for ask in orderbook['asks'][:10])
             
-            bid_depth = sum([price * qty for price, qty in bids])
-            ask_depth = sum([price * qty for price, qty in asks])
+            orderbook_data = {
+                'symbol': symbol,
+                'timestamp': datetime.now(),
+                'bids': json.dumps(orderbook['bids']),
+                'asks': json.dumps(orderbook['asks']),
+                'bid_depth': bid_depth,
+                'ask_depth': ask_depth
+            }
             
             # 存储到数据库
-            orderbook_record = OrderBookData(
-                symbol=symbol,
-                timestamp=datetime.now(),
-                bids=json.dumps(bids),
-                asks=json.dumps(asks),
-                bid_depth=bid_depth,
-                ask_depth=ask_depth
-            )
-            
+            orderbook_record = OrderBookData(**orderbook_data)
             self.db_manager.session.add(orderbook_record)
             self.db_manager.session.commit()
             
-            return {
-                'symbol': symbol,
-                'bids': bids,
-                'asks': asks,
-                'bid_depth': bid_depth,
-                'ask_depth': ask_depth,
-                'timestamp': datetime.now()
-            }
+            return orderbook_data
             
         except Exception as e:
             self.logger.error(f"收集订单簿数据失败: {e}")
@@ -177,23 +159,22 @@ class DataCollector:
                     low_price=row['low'],
                     close_price=row['close'],
                     volume=row['volume'],
-                    quote_volume=row['quote_asset_volume'],
-                    trades_count=row['number_of_trades'],
+                    quote_volume=row.get('quote_volume', 0),
+                    trades_count=row.get('trades_count', 0),
                     interval=interval
                 )
                 
                 # 检查是否已存在
                 existing = self.db_manager.session.query(MarketData).filter_by(
                     symbol=symbol,
-                    timestamp=row['timestamp'],
+                    timestamp=market_data.timestamp,
                     interval=interval
                 ).first()
                 
                 if not existing:
                     self.db_manager.session.add(market_data)
-            
-            self.db_manager.session.commit()
-            
+                    self.db_manager.session.commit()
+                    
         except Exception as e:
             self.logger.error(f"存储市场数据失败: {e}")
             self.db_manager.session.rollback()
@@ -425,25 +406,21 @@ class DataCollector:
     async def collect_latest_data(self, symbol: str, interval: str):
         """收集最新数据"""
         try:
-            # 获取最新的K线数据
-            klines = self.binance_client.client.get_klines(
-                symbol=symbol,
-                interval=interval,
-                limit=1
-            )
+            # 使用更新后的get_klines方法
+            klines_df = self.binance_client.get_klines(symbol, interval, 1)
             
-            if klines:
-                kline = klines[0]
+            if len(klines_df) > 0:
+                kline = klines_df.iloc[0]
                 market_data = MarketData(
                     symbol=symbol,
-                    timestamp=datetime.fromtimestamp(kline[0] / 1000),
-                    open_price=float(kline[1]),
-                    high_price=float(kline[2]),
-                    low_price=float(kline[3]),
-                    close_price=float(kline[4]),
-                    volume=float(kline[5]),
-                    quote_volume=float(kline[7]),
-                    trades_count=int(kline[8]),
+                    timestamp=kline['timestamp'],
+                    open_price=float(kline['open']),
+                    high_price=float(kline['high']),
+                    low_price=float(kline['low']),
+                    close_price=float(kline['close']),
+                    volume=float(kline['volume']),
+                    quote_volume=float(kline.get('quote_asset_volume', 0)),
+                    trades_count=int(kline.get('number_of_trades', 0)),
                     interval=interval
                 )
                 
@@ -483,7 +460,7 @@ class DataCollector:
                 })
             
             df = pd.DataFrame(data)
-            if not df.empty:
+            if len(df) > 0:
                 df = df.sort_values('timestamp').reset_index(drop=True)
             
             return df
@@ -520,7 +497,7 @@ class DataCollector:
                 })
             
             df = pd.DataFrame(data)
-            if not df.empty:
+            if len(df) > 0:
                 df = df.sort_values('timestamp').reset_index(drop=True)
             
             return df
