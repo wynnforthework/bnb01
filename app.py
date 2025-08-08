@@ -570,30 +570,39 @@ def update_spot_strategies():
         if not symbols:
             return jsonify({'success': False, 'message': '请先选择币种'})
         
-        # 模拟策略更新和回测
+        # 使用真实的回测引擎
         results = []
         for symbol in symbols:
             symbol_results = []
             for strategy_type in spot_config['strategy_types']:
                 strategy_key = f"{symbol}_{strategy_type}"
                 
-                # 模拟回测结果
-                import random
-                backtest_result = {
-                    'symbol': symbol,
-                    'strategy': strategy_type,
-                    'strategy_key': strategy_key,
-                    'total_return': random.uniform(-0.1, 0.2),
-                    'total_trades': random.randint(5, 20),
-                    'win_rate': random.uniform(0.4, 0.7),
-                    'max_drawdown': random.uniform(0.05, 0.15),
-                    'sharpe_ratio': random.uniform(0.5, 2.0),
-                    'enabled': True  # 默认启用
-                }
-                
-                # 更新启用状态
-                spot_config['enabled_strategies'][strategy_key] = True
-                symbol_results.append(backtest_result)
+                try:
+                    # 运行真实回测
+                    backtest_result = run_strategy_backtest(symbol, strategy_type)
+                    backtest_result['strategy_key'] = strategy_key
+                    backtest_result['enabled'] = True  # 默认启用
+                    
+                    # 更新启用状态
+                    spot_config['enabled_strategies'][strategy_key] = True
+                    symbol_results.append(backtest_result)
+                    
+                except Exception as e:
+                    print(f"回测失败 {symbol} {strategy_type}: {e}")
+                    # 如果回测失败，使用默认值
+                    backtest_result = {
+                        'symbol': symbol,
+                        'strategy': strategy_type,
+                        'strategy_key': strategy_key,
+                        'total_return': 0.0,
+                        'total_trades': 0,
+                        'win_rate': 0.0,
+                        'max_drawdown': 0.0,
+                        'sharpe_ratio': 0.0,
+                        'enabled': True,
+                        'error': str(e)
+                    }
+                    symbol_results.append(backtest_result)
             
             results.append({
                 'symbol': symbol,
@@ -607,6 +616,91 @@ def update_spot_strategies():
         })
     except Exception as e:
         return jsonify({'success': False, 'message': f'更新策略失败: {str(e)}'})
+
+def run_strategy_backtest(symbol, strategy_type):
+    """运行策略回测"""
+    try:
+        # 获取历史数据
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=30)  # 30天回测
+        
+        # 根据策略类型创建策略实例
+        if strategy_type == 'MA':
+            strategy = MovingAverageStrategy(symbol)
+            parameters = {'short_window': 10, 'long_window': 20}
+        elif strategy_type == 'RSI':
+            strategy = RSIStrategy(symbol)
+            parameters = {'period': 14, 'overbought': 70, 'oversold': 30}
+        elif strategy_type == 'ML':
+            strategy = MLStrategy(symbol)
+            parameters = {'model_type': 'random_forest'}
+        elif strategy_type == 'Chanlun':
+            # 缠论策略使用默认参数
+            strategy = None  # 需要实现缠论策略
+            parameters = {}
+        else:
+            raise ValueError(f"不支持的策略类型: {strategy_type}")
+        
+        if strategy is None:
+            # 如果策略未实现，返回默认结果
+            return {
+                'symbol': symbol,
+                'strategy': strategy_type,
+                'total_return': 0.0,
+                'total_trades': 0,
+                'win_rate': 0.0,
+                'max_drawdown': 0.0,
+                'sharpe_ratio': 0.0,
+                'parameters': parameters
+            }
+        
+        # 运行回测
+        backtest_result = backtest_engine.run_backtest(
+            strategy=strategy,
+            symbol=symbol,
+            start_date=start_date,
+            end_date=end_date,
+            parameters=parameters
+        )
+        
+        return {
+            'symbol': symbol,
+            'strategy': strategy_type,
+            'total_return': backtest_result.get('total_return', 0.0),
+            'total_trades': backtest_result.get('total_trades', 0),
+            'win_rate': backtest_result.get('win_rate', 0.0),
+            'max_drawdown': backtest_result.get('max_drawdown', 0.0),
+            'sharpe_ratio': backtest_result.get('sharpe_ratio', 0.0),
+            'parameters': parameters
+        }
+        
+    except Exception as e:
+        print(f"回测执行失败: {e}")
+        return {
+            'symbol': symbol,
+            'strategy': strategy_type,
+            'total_return': 0.0,
+            'total_trades': 0,
+            'win_rate': 0.0,
+            'max_drawdown': 0.0,
+            'sharpe_ratio': 0.0,
+            'error': str(e)
+        }
+
+@app.route('/api/spot/strategies/backtest/<symbol>/<strategy_type>', methods=['GET'])
+def get_strategy_backtest(symbol, strategy_type):
+    """获取单个策略的详细回测结果"""
+    try:
+        backtest_result = run_strategy_backtest(symbol, strategy_type)
+        return jsonify({
+            'success': True,
+            'result': backtest_result
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'获取回测结果失败: {str(e)}'
+        })
 
 @app.route('/api/spot/strategies/manage', methods=['POST'])
 def manage_spot_strategies():

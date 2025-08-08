@@ -1244,27 +1244,88 @@ function updateStrategiesDisplay() {
     if (!container) return;
     
     let html = '';
+    let totalStrategies = 0;
+    let enabledCount = 0;
+    let totalReturn = 0;
+    let totalWinRate = 0;
+    let validStrategies = 0;
+    
     selectedSymbols.forEach(symbol => {
         html += `
-            <div class="mb-3">
-                <h6 class="border-bottom pb-2">${symbol}</h6>
+            <div class="mb-4">
+                <h6 class="border-bottom pb-2 text-primary">${symbol}</h6>
                 <div class="row">
         `;
         
         ['MA', 'RSI', 'ML', 'Chanlun'].forEach(strategy => {
             const key = `${symbol}_${strategy}`;
             const enabled = enabledStrategies[key] || false;
+            const backtestData = window.strategyBacktestData ? window.strategyBacktestData[key] : null;
+            
+            totalStrategies++;
+            if (enabled) enabledCount++;
+            
+            // 计算统计数据
+            if (backtestData) {
+                totalReturn += backtestData.total_return || 0;
+                totalWinRate += backtestData.win_rate || 0;
+                validStrategies++;
+            }
+            
+            const returnPercent = backtestData ? (backtestData.total_return * 100).toFixed(2) : '0.00';
+            const winRatePercent = backtestData ? (backtestData.win_rate * 100).toFixed(1) : '0.0';
+            const tradeCount = backtestData ? backtestData.total_trades : 0;
+            const sharpeRatio = backtestData ? backtestData.sharpe_ratio.toFixed(2) : '0.00';
+            
+            const returnColor = returnPercent >= 0 ? 'text-success' : 'text-danger';
+            const winRateColor = winRatePercent >= 50 ? 'text-success' : 'text-warning';
+            
             html += `
-                <div class="col-md-3 mb-2">
-                    <div class="card ${enabled ? 'border-success' : 'border-secondary'} strategy-card" 
+                <div class="col-md-6 col-lg-3 mb-3">
+                    <div class="card ${enabled ? 'border-success' : 'border-secondary'} strategy-card h-100" 
                          onclick="toggleStrategy('${key}')" style="cursor: pointer;">
-                        <div class="card-body p-2">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="small">${strategy}</span>
-                                <span class="badge ${enabled ? 'bg-success' : 'bg-secondary'}">
-                                    ${enabled ? '启用' : '禁用'}
-                                </span>
+                        <div class="card-header p-2 d-flex justify-content-between align-items-center">
+                            <span class="fw-bold">${strategy}</span>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" 
+                                       ${enabled ? 'checked' : ''} 
+                                       onchange="toggleStrategy('${key}')">
                             </div>
+                        </div>
+                        <div class="card-body p-2">
+                            ${backtestData ? `
+                                <div class="row text-center">
+                                    <div class="col-6">
+                                        <small class="text-muted">收益率</small><br>
+                                        <span class="${returnColor} fw-bold">${returnPercent}%</span>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted">胜率</small><br>
+                                        <span class="${winRateColor} fw-bold">${winRatePercent}%</span>
+                                    </div>
+                                </div>
+                                <div class="row text-center mt-2">
+                                    <div class="col-6">
+                                        <small class="text-muted">交易次数</small><br>
+                                        <span class="fw-bold">${tradeCount}</span>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted">夏普比率</small><br>
+                                        <span class="fw-bold">${sharpeRatio}</span>
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <button class="btn btn-sm btn-outline-info w-100" 
+                                            onclick="viewDetailedBacktest('${symbol}', '${strategy}')">
+                                        <i class="fas fa-chart-line"></i> 详细回测
+                                    </button>
+                                </div>
+                            ` : `
+                                <div class="text-center text-muted">
+                                    <i class="fas fa-clock"></i><br>
+                                    <small>等待回测</small>
+                                </div>
+                            `}
                         </div>
                     </div>
                 </div>
@@ -1278,6 +1339,102 @@ function updateStrategiesDisplay() {
     });
     
     container.innerHTML = html;
+    
+    // 更新统计信息
+    updateStrategyStatistics(totalStrategies, enabledCount, totalReturn, totalWinRate, validStrategies);
+}
+
+function updateStrategyStatistics(total, enabled, totalReturn, totalWinRate, validStrategies) {
+    const totalElement = document.getElementById('total-strategies-count');
+    const enabledElement = document.getElementById('enabled-strategies-count');
+    const avgReturnElement = document.getElementById('avg-return');
+    const avgWinRateElement = document.getElementById('avg-win-rate');
+    
+    if (totalElement) totalElement.textContent = total;
+    if (enabledElement) enabledElement.textContent = enabled;
+    
+    if (validStrategies > 0) {
+        const avgReturn = (totalReturn / validStrategies * 100).toFixed(2);
+        const avgWinRate = (totalWinRate / validStrategies * 100).toFixed(1);
+        
+        if (avgReturnElement) avgReturnElement.textContent = `${avgReturn}%`;
+        if (avgWinRateElement) avgWinRateElement.textContent = `${avgWinRate}%`;
+    } else {
+        if (avgReturnElement) avgReturnElement.textContent = '0%';
+        if (avgWinRateElement) avgWinRateElement.textContent = '0%';
+    }
+}
+
+async function viewDetailedBacktest(symbol, strategyType) {
+    try {
+        const response = await fetch(`/api/spot/strategies/backtest/${symbol}/${strategyType}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            showDetailedBacktestModal(data.result);
+        } else {
+            showError(data.message);
+        }
+    } catch (error) {
+        showError('获取详细回测失败: ' + error.message);
+    }
+}
+
+function showDetailedBacktestModal(backtestData) {
+    const modalHtml = `
+        <div class="modal fade" id="backtestModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">${backtestData.symbol} - ${backtestData.strategy} 详细回测结果</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>收益指标</h6>
+                                <table class="table table-sm">
+                                    <tr><td>总收益率:</td><td class="${backtestData.total_return >= 0 ? 'text-success' : 'text-danger'}">${(backtestData.total_return * 100).toFixed(2)}%</td></tr>
+                                    <tr><td>夏普比率:</td><td>${backtestData.sharpe_ratio.toFixed(2)}</td></tr>
+                                    <tr><td>最大回撤:</td><td class="text-danger">${(backtestData.max_drawdown * 100).toFixed(2)}%</td></tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>交易统计</h6>
+                                <table class="table table-sm">
+                                    <tr><td>总交易次数:</td><td>${backtestData.total_trades}</td></tr>
+                                    <tr><td>胜率:</td><td class="${backtestData.win_rate >= 0.5 ? 'text-success' : 'text-warning'}">${(backtestData.win_rate * 100).toFixed(1)}%</td></tr>
+                                    <tr><td>策略状态:</td><td><span class="badge bg-success">已启用</span></td></tr>
+                                </table>
+                            </div>
+                        </div>
+                        ${backtestData.parameters ? `
+                            <div class="mt-3">
+                                <h6>策略参数</h6>
+                                <pre class="bg-light p-2 rounded">${JSON.stringify(backtestData.parameters, null, 2)}</pre>
+                            </div>
+                        ` : ''}
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // 移除现有模态框
+    const existingModal = document.getElementById('backtestModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // 添加新模态框
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // 显示模态框
+    const modal = new bootstrap.Modal(document.getElementById('backtestModal'));
+    modal.show();
 }
 
 // 全选币种
@@ -1328,6 +1485,8 @@ async function updateStrategies() {
     }
     
     try {
+        showSuccess('正在更新策略，请稍候...');
+        
         const response = await fetch('/api/spot/strategies/update', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -1336,10 +1495,22 @@ async function updateStrategies() {
         
         const data = await response.json();
         if (data.success) {
-            // 更新启用状态
+            // 存储回测数据到全局变量
+            window.strategyBacktestData = {};
+            
+            // 更新启用状态和回测数据
             data.results.forEach(symbolResult => {
                 symbolResult.strategies.forEach(strategy => {
                     enabledStrategies[strategy.strategy_key] = strategy.enabled;
+                    // 存储回测数据
+                    window.strategyBacktestData[strategy.strategy_key] = {
+                        total_return: strategy.total_return,
+                        total_trades: strategy.total_trades,
+                        win_rate: strategy.win_rate,
+                        max_drawdown: strategy.max_drawdown,
+                        sharpe_ratio: strategy.sharpe_ratio,
+                        parameters: strategy.parameters
+                    };
                 });
             });
             

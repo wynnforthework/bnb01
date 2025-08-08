@@ -287,7 +287,7 @@
                         <div id="strategies-panel" class="strategy-panel" style="display: none;">
                             <div class="row mb-3">
                                 <div class="col-md-8">
-                                    <h6><i class="fas fa-cogs"></i> 策略控制</h6>
+                                    <h6><i class="fas fa-cogs"></i> 策略控制与回测结果</h6>
                                 </div>
                                 <div class="col-md-4 text-end">
                                     <button class="btn btn-success btn-sm" onclick="enableAllStrategies()">
@@ -298,6 +298,29 @@
                                     </button>
                                 </div>
                             </div>
+                            
+                            <!-- 策略统计信息 -->
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <div class="alert alert-info">
+                                        <div class="row">
+                                            <div class="col-md-3">
+                                                <strong>总策略数:</strong> <span id="total-strategies-count">0</span>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <strong>已启用:</strong> <span id="enabled-strategies-count">0</span>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <strong>平均收益率:</strong> <span id="avg-return">0%</span>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <strong>平均胜率:</strong> <span id="avg-win-rate">0%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
                             <div id="strategies-container">
                                 <!-- 策略列表将在这里动态生成 -->
                             </div>
