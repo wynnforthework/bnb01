@@ -1,21 +1,11 @@
 {
-  "leverage": 10,
+  "leverage": 20,
   "symbols": [
     "BTCUSDT",
     "ETHUSDT",
     "BNBUSDT",
     "ADAUSDT",
-    "DOGEUSDT",
-    "SOLUSDT",
-    "DOTUSDT",
-    "AVAXUSDT",
-    "LINKUSDT",
-    "LTCUSDT",
-    "XRPUSDT",
-    "MATICUSDT",
-    "UNIUSDT",
-    "ATOMUSDT",
-    "FILUSDT"
+    "DOGEUSDT"
   ],
-  "updated_at": "2025-08-06T19:39:09.177061"
+  "updated_at": "2025-08-08T14:41:25.725081"
 }

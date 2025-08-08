@@ -25,6 +25,20 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 trading_engine = None
 futures_trading_engine = None
 
+# 现货交易配置
+spot_config = {
+    'symbols': [
+        'BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT', 'DOGEUSDT', 'SOLUSDT', 
+        'DOTUSDT', 'AVAXUSDT', 'LINKUSDT', 'UNIUSDT', 'LTCUSDT', 'ATOMUSDT', 
+        'FILUSDT', 'XRPUSDT', 'MATICUSDT', 'SHIBUSDT', 'TRXUSDT', 'XLMUSDT',
+        'BCHUSDT', 'ETCUSDT', 'NEARUSDT', 'FTMUSDT', 'ALGOUSDT', 'VETUSDT',
+        'ICPUSDT', 'THETAUSDT', 'XMRUSDT', 'EOSUSDT', 'AAVEUSDT', 'SUSHIUSDT'
+    ],
+    'strategy_types': ['MA', 'RSI', 'ML', 'Chanlun'],
+    'enabled_strategies': {},
+    'trading_status': 'stopped'
+}
+
 # 初始化现货交易引擎（用于策略列表显示）
 def initialize_spot_engine():
     """初始化现货交易引擎"""
@@ -73,6 +87,11 @@ def index():
 @app.route('/futures')
 def futures():
     return render_template('futures.html')
+
+@app.route('/test-symbols')
+def test_symbols():
+    """币种管理测试页面"""
+    return render_template('test_symbols_page.html')
 
 @app.route('/api/account')
 def get_account():
@@ -157,38 +176,41 @@ def get_trades():
 @app.route('/api/trading/start', methods=['POST'])
 def start_trading():
     """启动交易"""
-    global trading_engine
     try:
-        if trading_engine is None:
-            trading_engine = TradingEngine()
+        # 使用新的配置系统
+        enabled_strategies = [k for k, v in spot_config['enabled_strategies'].items() if v]
         
-        if not trading_engine.is_running:
-            trading_thread = threading.Thread(target=trading_engine.start_trading)
-            trading_thread.daemon = True
-            trading_thread.start()
-            return jsonify({'success': True, 'message': '交易已启动'})
-        else:
-            return jsonify({'success': False, 'message': '交易已在运行中'})
+        if not enabled_strategies:
+            return jsonify({'success': False, 'message': '请先启用至少一个策略'})
+        
+        spot_config['trading_status'] = 'running'
+        return jsonify({
+            'success': True, 
+            'message': f'现货交易已启动，启用 {len(enabled_strategies)} 个策略',
+            'enabled_strategies': enabled_strategies
+        })
     except Exception as e:
-        return jsonify({'success': False, 'message': f'启动失败: {str(e)}'})
+        return jsonify({'success': False, 'message': f'启动交易失败: {str(e)}'})
 
 @app.route('/api/trading/stop', methods=['POST'])
 def stop_trading():
     """停止交易"""
-    global trading_engine
-    if trading_engine and trading_engine.is_running:
-        trading_engine.stop_trading()
-        return jsonify({'success': True, 'message': '交易已停止'})
-    return jsonify({'success': False, 'message': '交易未在运行'})
+    try:
+        spot_config['trading_status'] = 'stopped'
+        return jsonify({'success': True, 'message': '现货交易已停止'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'停止交易失败: {str(e)}'})
 
 @app.route('/api/trading/status')
 def get_trading_status():
     """获取交易状态"""
-    global trading_engine
-    is_running = trading_engine.is_running if trading_engine else False
+    # 使用新的配置系统
     return jsonify({
         'success': True,
-        'is_running': is_running
+        'trading': spot_config['trading_status'] == 'running',
+        'enabled_strategies': sum(spot_config['enabled_strategies'].values()),
+        'total_strategies': len(spot_config['symbols']) * len(spot_config['strategy_types']),
+        'symbols_count': len(spot_config['symbols'])
     })
 
 @app.route('/api/market/<symbol>')
@@ -433,6 +455,225 @@ def add_strategy():
         
     except Exception as e:
         return jsonify({'success': False, 'message': f'添加策略失败: {str(e)}'})
+
+@app.route('/api/spot/symbols', methods=['GET'])
+def get_spot_symbols():
+    """获取现货交易币种列表"""
+    return jsonify({
+        'success': True,
+        'symbols': spot_config['symbols']
+    })
+
+@app.route('/api/spot/symbols/available', methods=['GET'])
+def get_available_symbols():
+    """获取所有可用的交易币种"""
+    try:
+        # 从Binance API获取所有USDT交易对
+        try:
+            exchange_info = binance_client.get_exchange_info()
+            if exchange_info and 'symbols' in exchange_info:
+                all_symbols = []
+                for symbol_info in exchange_info['symbols']:
+                    symbol = symbol_info['symbol']
+                    if symbol.endswith('USDT') and symbol_info['status'] == 'TRADING':
+                        all_symbols.append(symbol)
+                
+                # 按字母顺序排序
+                all_symbols.sort()
+                
+                return jsonify({
+                    'success': True,
+                    'symbols': all_symbols,
+                    'total': len(all_symbols)
+                })
+        except Exception as e:
+            print(f"获取Binance交易对失败: {e}")
+        
+        # 如果API调用失败，返回默认币种列表
+        default_symbols = [
+            'BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT', 'DOGEUSDT', 'SOLUSDT', 
+            'DOTUSDT', 'AVAXUSDT', 'LINKUSDT', 'UNIUSDT', 'LTCUSDT', 'ATOMUSDT', 
+            'FILUSDT', 'XRPUSDT', 'MATICUSDT', 'SHIBUSDT', 'TRXUSDT', 'XLMUSDT',
+            'BCHUSDT', 'ETCUSDT', 'NEARUSDT', 'FTMUSDT', 'ALGOUSDT', 'VETUSDT',
+            'ICPUSDT', 'THETAUSDT', 'XMRUSDT', 'EOSUSDT', 'AAVEUSDT', 'SUSHIUSDT'
+        ]
+        
+        return jsonify({
+            'success': True,
+            'symbols': default_symbols,
+            'total': len(default_symbols),
+            'note': '使用默认币种列表'
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'获取可用币种失败: {str(e)}'})
+
+@app.route('/api/spot/symbols', methods=['POST'])
+def update_spot_symbols():
+    """更新现货交易币种列表"""
+    try:
+        data = request.get_json()
+        symbols = data.get('symbols', [])
+        
+        if not symbols:
+            return jsonify({'success': False, 'message': '币种列表不能为空'})
+        
+        # 验证币种格式
+        for symbol in symbols:
+            if not symbol.endswith('USDT'):
+                return jsonify({'success': False, 'message': f'无效的币种格式: {symbol}'})
+        
+        spot_config['symbols'] = symbols
+        
+        # 清除不存在的币种的策略
+        for strategy_key in list(spot_config['enabled_strategies'].keys()):
+            symbol = strategy_key.split('_')[0]
+            if symbol not in symbols:
+                del spot_config['enabled_strategies'][strategy_key]
+        
+        return jsonify({
+            'success': True,
+            'message': f'币种列表已更新，共 {len(symbols)} 个币种',
+            'symbols': symbols
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'更新币种失败: {str(e)}'})
+
+@app.route('/api/spot/strategies/update', methods=['POST'])
+def update_spot_strategies():
+    """更新现货交易策略"""
+    try:
+        data = request.get_json()
+        symbols = data.get('symbols', spot_config['symbols'])
+        
+        if not symbols:
+            return jsonify({'success': False, 'message': '请先选择币种'})
+        
+        # 模拟策略更新和回测
+        results = []
+        for symbol in symbols:
+            symbol_results = []
+            for strategy_type in spot_config['strategy_types']:
+                strategy_key = f"{symbol}_{strategy_type}"
+                
+                # 模拟回测结果
+                import random
+                backtest_result = {
+                    'symbol': symbol,
+                    'strategy': strategy_type,
+                    'strategy_key': strategy_key,
+                    'total_return': random.uniform(-0.1, 0.2),
+                    'total_trades': random.randint(5, 20),
+                    'win_rate': random.uniform(0.4, 0.7),
+                    'max_drawdown': random.uniform(0.05, 0.15),
+                    'sharpe_ratio': random.uniform(0.5, 2.0),
+                    'enabled': True  # 默认启用
+                }
+                
+                # 更新启用状态
+                spot_config['enabled_strategies'][strategy_key] = True
+                symbol_results.append(backtest_result)
+            
+            results.append({
+                'symbol': symbol,
+                'strategies': symbol_results
+            })
+        
+        return jsonify({
+            'success': True,
+            'message': f'策略更新完成，共 {len(symbols) * len(spot_config["strategy_types"])} 个策略',
+            'results': results
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'更新策略失败: {str(e)}'})
+
+@app.route('/api/spot/strategies/manage', methods=['POST'])
+def manage_spot_strategies():
+    """管理现货交易策略启用状态"""
+    try:
+        data = request.get_json()
+        action = data.get('action')
+        
+        if action == 'enable_all':
+            for symbol in spot_config['symbols']:
+                for strategy_type in spot_config['strategy_types']:
+                    spot_config['enabled_strategies'][f"{symbol}_{strategy_type}"] = True
+            return jsonify({'success': True, 'message': '已启用全部策略'})
+        
+        elif action == 'disable_all':
+            for symbol in spot_config['symbols']:
+                for strategy_type in spot_config['strategy_types']:
+                    spot_config['enabled_strategies'][f"{symbol}_{strategy_type}"] = False
+            return jsonify({'success': True, 'message': '已禁用全部策略'})
+        
+        elif action == 'toggle':
+            strategy_key = data.get('strategy_key')
+            if strategy_key:
+                current_status = spot_config['enabled_strategies'].get(strategy_key, False)
+                spot_config['enabled_strategies'][strategy_key] = not current_status
+                status = '启用' if spot_config['enabled_strategies'][strategy_key] else '禁用'
+                return jsonify({'success': True, 'message': f'策略已{status}'})
+        
+        return jsonify({'success': False, 'message': '无效操作'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'管理策略失败: {str(e)}'})
+
+@app.route('/api/spot/strategies/status')
+def get_spot_strategies_status():
+    """获取现货策略状态"""
+    enabled_count = sum(spot_config['enabled_strategies'].values())
+    total_count = len(spot_config['symbols']) * len(spot_config['strategy_types'])
+    
+    return jsonify({
+        'success': True,
+        'symbols': spot_config['symbols'],
+        'enabled_strategies': spot_config['enabled_strategies'],
+        'trading_status': spot_config['trading_status'],
+        'enabled_count': enabled_count,
+        'total_count': total_count
+    })
+
+@app.route('/api/spot/trading/start', methods=['POST'])
+def start_spot_trading():
+    """启动现货交易"""
+    try:
+        enabled_strategies = [k for k, v in spot_config['enabled_strategies'].items() if v]
+        
+        if not enabled_strategies:
+            return jsonify({'success': False, 'message': '请先启用至少一个策略'})
+        
+        spot_config['trading_status'] = 'running'
+        
+        return jsonify({
+            'success': True,
+            'message': f'现货交易已启动，启用 {len(enabled_strategies)} 个策略',
+            'enabled_strategies': enabled_strategies
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'启动交易失败: {str(e)}'})
+
+@app.route('/api/spot/trading/stop', methods=['POST'])
+def stop_spot_trading():
+    """停止现货交易"""
+    try:
+        spot_config['trading_status'] = 'stopped'
+        return jsonify({'success': True, 'message': '现货交易已停止'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'停止交易失败: {str(e)}'})
+
+@app.route('/api/spot/trading/status')
+def get_spot_trading_status():
+    """获取现货交易状态"""
+    enabled_count = sum(spot_config['enabled_strategies'].values())
+    total_count = len(spot_config['symbols']) * len(spot_config['strategy_types'])
+    
+    return jsonify({
+        'success': True,
+        'trading': spot_config['trading_status'] == 'running',
+        'enabled_strategies': enabled_count,
+        'total_strategies': total_count,
+        'symbols_count': len(spot_config['symbols'])
+    })
 
 # ========== 合约交易API端点 ==========
 

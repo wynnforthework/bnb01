@@ -4,10 +4,17 @@ let currentSymbol = 'BTCUSDT';
 
 // 初始化应用
 document.addEventListener('DOMContentLoaded', function () {
+    console.log('🚀 现货交易页面开始初始化...');
     initializeSocket();
     loadInitialData();
     bindEvents();
     checkTradingStatus();
+    
+    // 延迟初始化币种管理，确保页面完全加载
+    setTimeout(() => {
+        console.log('🔄 开始初始化币种管理...');
+        initializeSymbolManagement();
+    }, 1000);
 });
 
 // 初始化WebSocket连接
@@ -65,6 +72,13 @@ function bindEvents() {
     }
 
     // 策略管理按钮
+    const showSymbolsBtn = document.getElementById('show-symbols');
+    if (showSymbolsBtn) {
+        showSymbolsBtn.addEventListener('click', function () {
+            showStrategyPanel('symbols');
+        });
+    }
+
     const showStrategiesBtn = document.getElementById('show-strategies');
     if (showStrategiesBtn) {
         showStrategiesBtn.addEventListener('click', function () {
@@ -76,13 +90,6 @@ function bindEvents() {
     if (showBacktestBtn) {
         showBacktestBtn.addEventListener('click', function () {
             showStrategyPanel('backtest');
-        });
-    }
-
-    const showMlBtn = document.getElementById('show-ml');
-    if (showMlBtn) {
-        showMlBtn.addEventListener('click', function () {
-            showStrategyPanel('ml');
         });
     }
 
@@ -916,79 +923,443 @@ async function compareStrategies() {
 
 // 显示策略比较结果
 function displayStrategyComparison(results, symbol) {
-    const resultsContainer = document.getElementById('backtest-results');
+    const container = document.getElementById('backtest-results');
     
-    const strategyNames = {
-        'MA': '移动平均线',
-        'RSI': 'RSI策略',
-        'ML': '机器学习',
-        'Chanlun': '缠论01'
-    };
+    let html = `
+        <h6>策略比较结果 - ${symbol}</h6>
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>策略</th>
+                        <th>总收益率</th>
+                        <th>交易次数</th>
+                        <th>胜率</th>
+                        <th>最大回撤</th>
+                        <th>夏普比率</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
     
-    if (results.length === 0) {
-        resultsContainer.innerHTML = '<p class="text-danger">所有策略回测都失败了</p>';
-        return;
-    }
+    results.forEach(result => {
+        html += `
+            <tr>
+                <td>${result.strategy}</td>
+                <td class="${result.total_return >= 0 ? 'text-success' : 'text-danger'}">${(result.total_return * 100).toFixed(2)}%</td>
+                <td>${result.total_trades}</td>
+                <td>${(result.win_rate * 100).toFixed(1)}%</td>
+                <td class="text-danger">${(result.max_drawdown * 100).toFixed(2)}%</td>
+                <td>${result.sharpe_ratio.toFixed(2)}</td>
+            </tr>
+        `;
+    });
     
-    // 按总收益率排序
-    results.sort((a, b) => b.total_return - a.total_return);
-    
-    const html = `
-        <div class="card">
-            <div class="card-header">
-                <h6>策略比较 - ${symbol}</h6>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th>策略</th>
-                                <th>总收益率</th>
-                                <th>年化收益率</th>
-                                <th>最大回撤</th>
-                                <th>夏普比率</th>
-                                <th>胜率</th>
-                                <th>交易次数</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${results.map(result => `
-                                <tr>
-                                    <td><strong>${strategyNames[result.strategy]}</strong></td>
-                                    <td class="${result.total_return >= 0 ? 'text-success' : 'text-danger'}">
-                                        ${(result.total_return * 100).toFixed(2)}%
-                                    </td>
-                                    <td class="${result.annual_return >= 0 ? 'text-success' : 'text-danger'}">
-                                        ${(result.annual_return * 100).toFixed(2)}%
-                                    </td>
-                                    <td class="text-danger">
-                                        ${(result.max_drawdown * 100).toFixed(2)}%
-                                    </td>
-                                    <td class="${result.sharpe_ratio >= 0 ? 'text-success' : 'text-danger'}">
-                                        ${result.sharpe_ratio.toFixed(2)}
-                                    </td>
-                                    <td class="${result.win_rate >= 0.5 ? 'text-success' : 'text-danger'}">
-                                        ${(result.win_rate * 100).toFixed(1)}%
-                                    </td>
-                                    <td>${result.total_trades}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-                
-                <div class="mt-3">
-                    <h6>最佳策略: ${strategyNames[results[0].strategy]}</h6>
-                    <p class="text-muted">
-                        总收益率: ${(results[0].total_return * 100).toFixed(2)}% | 
-                        夏普比率: ${results[0].sharpe_ratio.toFixed(2)} | 
-                        胜率: ${(results[0].win_rate * 100).toFixed(1)}%
-                    </p>
-                </div>
-            </div>
+    html += `
+                </tbody>
+            </table>
         </div>
     `;
     
-    resultsContainer.innerHTML = html;
+    container.innerHTML = html;
 }
+
+// ========== 新增的币种管理和策略控制功能 ==========
+
+// 全局变量
+let selectedSymbols = [];
+let enabledStrategies = {};
+let availableSymbols = [];
+let allAvailableSymbols = []; // 存储所有可用币种
+
+// 初始化币种管理
+async function initializeSymbolManagement() {
+    console.log('🔍 开始初始化币种管理...');
+    try {
+        await loadAvailableSymbols();
+        console.log('✅ 加载可用币种完成');
+        await loadStrategiesStatus();
+        console.log('✅ 加载策略状态完成');
+        updateSymbolsDisplay();
+        console.log('✅ 更新币种显示完成');
+        updateStrategiesDisplay();
+        console.log('✅ 更新策略显示完成');
+        
+        // 显示成功消息
+        showSuccess('币种管理初始化完成');
+    } catch (error) {
+        console.error('❌ 币种管理初始化失败:', error);
+        showError('币种管理初始化失败: ' + error.message);
+    }
+}
+
+// 加载可用币种
+async function loadAvailableSymbols() {
+    console.log('🔄 正在加载可用币种...');
+    try {
+        // 首先尝试获取所有可用币种
+        const response = await fetch('/api/spot/symbols/available');
+        console.log('可用币种API响应状态:', response.status);
+        const data = await response.json();
+        console.log('可用币种API响应数据:', data);
+        
+        if (data.success) {
+            allAvailableSymbols = data.symbols;
+            console.log('✅ 所有可用币种已加载:', allAvailableSymbols.length, '个');
+        }
+        
+        // 然后获取当前选择的币种
+        const currentResponse = await fetch('/api/spot/symbols');
+        console.log('当前币种API响应状态:', currentResponse.status);
+        const currentData = await currentResponse.json();
+        console.log('当前币种API响应数据:', currentData);
+        
+        if (currentData.success) {
+            availableSymbols = currentData.symbols;
+            console.log('✅ 当前币种已加载:', availableSymbols);
+        } else {
+            console.error('❌ 加载当前币种失败:', currentData.message);
+            throw new Error(currentData.message);
+        }
+    } catch (error) {
+        console.error('❌ 加载币种失败:', error);
+        throw error;
+    }
+}
+
+// 加载策略状态
+async function loadStrategiesStatus() {
+    console.log('🔄 正在加载策略状态...');
+    try {
+        const response = await fetch('/api/spot/strategies/status');
+        console.log('策略状态API响应状态:', response.status);
+        const data = await response.json();
+        console.log('策略状态API响应数据:', data);
+        if (data.success) {
+            selectedSymbols = data.symbols;
+            enabledStrategies = data.enabled_strategies;
+            console.log('✅ 策略状态已加载:', {selectedSymbols, enabledStrategies});
+        } else {
+            console.error('❌ 加载策略状态失败:', data.message);
+            throw new Error(data.message);
+        }
+    } catch (error) {
+        console.error('❌ 加载策略状态失败:', error);
+        throw error;
+    }
+}
+
+// 更新币种显示
+function updateSymbolsDisplay() {
+    console.log('🔄 正在更新币种显示...');
+    const container = document.getElementById('symbols-container');
+    if (!container) {
+        console.error('❌ 找不到币种容器元素');
+        return;
+    }
+    
+    console.log('可用币种:', availableSymbols);
+    let html = '';
+    availableSymbols.forEach(symbol => {
+        const isSelected = selectedSymbols.includes(symbol);
+        html += `
+            <div class="col-md-3 col-sm-4 col-6 mb-2 symbol-item">
+                <div class="form-check">
+                    <input class="form-check-input symbol-checkbox" type="checkbox" 
+                           value="${symbol}" id="symbol-${symbol}"
+                           ${isSelected ? 'checked' : ''}>
+                    <label class="form-check-label" for="symbol-${symbol}">
+                        ${symbol}
+                    </label>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+    console.log('✅ 币种显示已更新，HTML长度:', html.length);
+    updateSymbolCount();
+}
+
+// 更新币种计数
+function updateSymbolCount() {
+    const countElement = document.getElementById('symbol-count');
+    if (countElement) {
+        countElement.textContent = availableSymbols.length;
+    }
+}
+
+// 搜索币种
+function filterSymbols() {
+    const searchTerm = document.getElementById('symbol-search').value.toLowerCase();
+    const symbolItems = document.querySelectorAll('.symbol-item');
+    
+    symbolItems.forEach(item => {
+        const symbol = item.querySelector('label').textContent.toLowerCase();
+        if (symbol.includes(searchTerm)) {
+            item.style.display = 'block';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+}
+
+// 显示所有币种
+function showAllSymbols() {
+    availableSymbols = allAvailableSymbols;
+    updateSymbolsDisplay();
+    showSuccess('已显示所有可用币种');
+}
+
+// 显示热门币种
+function showPopularSymbols() {
+    const popularSymbols = [
+        'BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT', 'DOGEUSDT', 'SOLUSDT',
+        'DOTUSDT', 'AVAXUSDT', 'LINKUSDT', 'UNIUSDT', 'LTCUSDT', 'ATOMUSDT',
+        'FILUSDT', 'XRPUSDT', 'MATICUSDT', 'SHIBUSDT'
+    ];
+    
+    availableSymbols = popularSymbols.filter(symbol => 
+        allAvailableSymbols.includes(symbol)
+    );
+    updateSymbolsDisplay();
+    showSuccess('已显示热门币种');
+}
+
+// 添加自定义币种
+function addCustomSymbol() {
+    const symbol = prompt('请输入币种代码 (例如: BTCUSDT):');
+    if (symbol) {
+        const upperSymbol = symbol.toUpperCase();
+        if (upperSymbol.endsWith('USDT')) {
+            if (!availableSymbols.includes(upperSymbol)) {
+                availableSymbols.push(upperSymbol);
+                updateSymbolsDisplay();
+                showSuccess(`已添加币种: ${upperSymbol}`);
+            } else {
+                showError('该币种已存在');
+            }
+        } else {
+            showError('币种格式错误，请使用 USDT 交易对');
+        }
+    }
+}
+
+// 更新策略显示
+function updateStrategiesDisplay() {
+    const container = document.getElementById('strategies-container');
+    if (!container) return;
+    
+    let html = '';
+    selectedSymbols.forEach(symbol => {
+        html += `
+            <div class="mb-3">
+                <h6 class="border-bottom pb-2">${symbol}</h6>
+                <div class="row">
+        `;
+        
+        ['MA', 'RSI', 'ML', 'Chanlun'].forEach(strategy => {
+            const key = `${symbol}_${strategy}`;
+            const enabled = enabledStrategies[key] || false;
+            html += `
+                <div class="col-md-3 mb-2">
+                    <div class="card ${enabled ? 'border-success' : 'border-secondary'} strategy-card" 
+                         onclick="toggleStrategy('${key}')" style="cursor: pointer;">
+                        <div class="card-body p-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="small">${strategy}</span>
+                                <span class="badge ${enabled ? 'bg-success' : 'bg-secondary'}">
+                                    ${enabled ? '启用' : '禁用'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += `
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+// 全选币种
+function selectAllSymbols() {
+    document.querySelectorAll('.symbol-checkbox').forEach(checkbox => {
+        checkbox.checked = true;
+    });
+}
+
+// 清空币种选择
+function clearAllSymbols() {
+    document.querySelectorAll('.symbol-checkbox').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+}
+
+// 保存币种选择
+async function saveSymbolSelection() {
+    const selected = Array.from(document.querySelectorAll('.symbol-checkbox:checked'))
+                        .map(checkbox => checkbox.value);
+    
+    try {
+        const response = await fetch('/api/spot/symbols', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({symbols: selected})
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            selectedSymbols = selected;
+            showSuccess(data.message);
+            await loadStrategiesStatus();
+            updateStrategiesDisplay();
+        } else {
+            showError(data.message);
+        }
+    } catch (error) {
+        showError('保存币种选择失败: ' + error.message);
+    }
+}
+
+// 更新策略
+async function updateStrategies() {
+    if (selectedSymbols.length === 0) {
+        showError('请先选择币种');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/spot/strategies/update', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({symbols: selectedSymbols})
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            // 更新启用状态
+            data.results.forEach(symbolResult => {
+                symbolResult.strategies.forEach(strategy => {
+                    enabledStrategies[strategy.strategy_key] = strategy.enabled;
+                });
+            });
+            
+            updateStrategiesDisplay();
+            showSuccess(data.message);
+        } else {
+            showError(data.message);
+        }
+    } catch (error) {
+        showError('更新策略失败: ' + error.message);
+    }
+}
+
+// 启用全部策略
+async function enableAllStrategies() {
+    try {
+        const response = await fetch('/api/spot/strategies/manage', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({action: 'enable_all'})
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            selectedSymbols.forEach(symbol => {
+                ['MA', 'RSI', 'ML', 'Chanlun'].forEach(strategy => {
+                    enabledStrategies[`${symbol}_${strategy}`] = true;
+                });
+            });
+            updateStrategiesDisplay();
+            showSuccess(data.message);
+        } else {
+            showError(data.message);
+        }
+    } catch (error) {
+        showError('启用策略失败: ' + error.message);
+    }
+}
+
+// 禁用全部策略
+async function disableAllStrategies() {
+    try {
+        const response = await fetch('/api/spot/strategies/manage', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({action: 'disable_all'})
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            selectedSymbols.forEach(symbol => {
+                ['MA', 'RSI', 'ML', 'Chanlun'].forEach(strategy => {
+                    enabledStrategies[`${symbol}_${strategy}`] = false;
+                });
+            });
+            updateStrategiesDisplay();
+            showSuccess(data.message);
+        } else {
+            showError(data.message);
+        }
+    } catch (error) {
+        showError('禁用策略失败: ' + error.message);
+    }
+}
+
+// 切换单个策略
+async function toggleStrategy(strategyKey) {
+    try {
+        const response = await fetch('/api/spot/strategies/manage', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({action: 'toggle', strategy_key: strategyKey})
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            enabledStrategies[strategyKey] = !enabledStrategies[strategyKey];
+            updateStrategiesDisplay();
+            showSuccess(data.message);
+        } else {
+            showError(data.message);
+        }
+    } catch (error) {
+        showError('切换策略失败: ' + error.message);
+    }
+}
+
+// 修改现有的策略面板切换功能
+function showStrategyPanel(panelType) {
+    // 隐藏所有面板
+    document.querySelectorAll('.strategy-panel').forEach(panel => {
+        panel.style.display = 'none';
+    });
+    
+    // 移除所有按钮的active类
+    document.querySelectorAll('.btn-group .btn').forEach(btn => {
+        btn.classList.remove('btn-primary', 'btn-info', 'btn-success');
+        btn.classList.add('btn-outline-primary', 'btn-outline-info', 'btn-outline-success');
+    });
+    
+    // 显示选中的面板
+    if (panelType === 'symbols') {
+        document.getElementById('symbols-panel').style.display = 'block';
+        document.getElementById('show-symbols').classList.remove('btn-outline-primary');
+        document.getElementById('show-symbols').classList.add('btn-primary');
+    } else if (panelType === 'strategies') {
+        document.getElementById('strategies-panel').style.display = 'block';
+        document.getElementById('show-strategies').classList.remove('btn-outline-info');
+        document.getElementById('show-strategies').classList.add('btn-info');
+    } else if (panelType === 'backtest') {
+        document.getElementById('backtest-panel').style.display = 'block';
+        document.getElementById('show-backtest').classList.remove('btn-outline-success');
+        document.getElementById('show-backtest').classList.add('btn-success');
+    }
+}
+
