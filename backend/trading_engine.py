@@ -84,7 +84,7 @@ class TradingEngine:
         """初始化交易策略"""
         # 验证并过滤有效的交易对
         all_symbols = self.config.DEFAULT_SYMBOLS + [
-            'DOGEUSDT', 'SOLUSDT', 'MATICUSDT', 'DOTUSDT', 'AVAXUSDT', 
+            'DOGEUSDT', 'SOLUSDT', 'DOTUSDT', 'AVAXUSDT', 
             'LINKUSDT', 'UNIUSDT', 'LTCUSDT', 'ATOMUSDT', 'FILUSDT'
         ]
         
