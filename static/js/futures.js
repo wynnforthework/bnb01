@@ -3,6 +3,7 @@ let futuresSocket;
 let currentFuturesSymbol = 'BTCUSDT';
 let currentLeverage = 10;
 let selectedSymbols = ['BTCUSDT', 'ETHUSDT'];
+let futuresStrategies = []; // 全局策略数据
 
 // 初始化合约交易页面
 document.addEventListener('DOMContentLoaded', function() {
@@ -93,6 +94,16 @@ function bindFuturesEvents() {
     document.getElementById('futures-order-symbol').addEventListener('change', function() {
         updateFuturesMarketInfo(this.value);
     });
+    
+    // 添加币种
+    document.getElementById('add-futures-symbol').addEventListener('click', function() {
+        addFuturesSymbol();
+    });
+    
+    // 更新币种选择
+    document.getElementById('update-futures-symbols').addEventListener('click', function() {
+        updateFuturesSymbols();
+    });
 }
 
 // 加载合约交易初始数据
@@ -102,6 +113,7 @@ function loadFuturesInitialData() {
     loadFuturesTradesData();
     loadFuturesMarketData(currentFuturesSymbol);
     loadFuturesStrategies();
+    loadFuturesSymbols();
 }
 
 // 加载合约账户数据
@@ -646,7 +658,20 @@ async function loadFuturesStrategies() {
         const data = await response.json();
         
         if (data.success) {
+            // 更新全局策略数据
+            futuresStrategies = data.strategies;
+            
+            // 显示策略表格
             displayFuturesStrategies(data.strategies);
+            
+            // 显示策略管理面板
+            displayFuturesStrategiesManagement(data.strategies);
+            
+            // 显示策略管理部分
+            const strategiesSection = document.getElementById('futures-strategies-section');
+            if (strategiesSection) {
+                strategiesSection.style.display = 'block';
+            }
         }
     } catch (error) {
         console.error('加载合约策略失败:', error);
@@ -686,6 +711,41 @@ function displayFuturesStrategies(strategies) {
     });
     
     tbody.innerHTML = html;
+}
+
+// 显示合约策略管理面板
+function displayFuturesStrategiesManagement(strategies) {
+    const container = document.getElementById('futures-strategies-container');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    if (!strategies || strategies.length === 0) {
+        container.innerHTML = '<div class="notification is-warning is-light">暂无策略数据</div>';
+        return;
+    }
+
+    strategies.forEach(strategy => {
+        const strategyDiv = document.createElement('div');
+        strategyDiv.className = 'field';
+        strategyDiv.innerHTML = `
+            <div class="control">
+                <label class="checkbox">
+                    <input type="checkbox" 
+                           ${strategy.enabled ? 'checked' : ''} 
+                           onchange="toggleFuturesStrategy('${strategy.name}', this.checked)">
+                    <span class="ml-2">${strategy.name}</span>
+                    <span class="tag is-small ml-2 ${strategy.enabled ? 'is-success' : 'is-light'}">
+                        ${strategy.enabled ? '已启用' : '已禁用'}
+                    </span>
+                </label>
+            </div>
+        `;
+        container.appendChild(strategyDiv);
+    });
+
+    // 更新统计信息
+    updateFuturesStrategyStatistics(strategies);
 }
 
 // 工具函数
@@ -995,9 +1055,23 @@ function displayFuturesSymbols(symbols) {
                 <input type="checkbox" value="${symbol}" ${isSelected ? 'checked' : ''}>
                 <span class="ml-2">${symbol}</span>
             </label>
+            <button class="button is-small is-danger is-outlined ml-2" onclick="deleteFuturesSymbol('${symbol}')">
+                <span class="icon is-small">
+                    <i class="fas fa-trash"></i>
+                </span>
+            </button>
         `;
         container.appendChild(symbolDiv);
+        
+        // 为复选框添加change事件监听器
+        const checkbox = symbolDiv.querySelector('input[type="checkbox"]');
+        checkbox.addEventListener('change', function() {
+            updateFuturesEnabledSymbolsDisplay();
+        });
     });
+    
+    // 更新合约交易控制面板中的启用币种显示
+    updateFuturesEnabledSymbolsDisplay();
 }
 
 // 更新合约币种选择
@@ -1018,6 +1092,8 @@ async function updateFuturesSymbols() {
         if (response.ok) {
             showSuccess('币种选择已更新');
             loadFuturesStrategiesStatus();
+            // 更新合约交易控制面板中的启用币种显示
+            updateFuturesEnabledSymbolsDisplay();
         } else {
             const error = await response.json();
             showError(`更新币种选择失败: ${error.message}`);
@@ -1025,6 +1101,75 @@ async function updateFuturesSymbols() {
     } catch (error) {
         console.error('更新币种选择出错:', error);
         showError('更新币种选择时发生错误');
+    }
+}
+
+// 添加合约币种
+async function addFuturesSymbol() {
+    const newSymbolInput = document.getElementById('futures-new-symbol');
+    const newSymbol = newSymbolInput.value.trim().toUpperCase();
+    
+    if (!newSymbol) {
+        showError('请输入币种代码');
+        return;
+    }
+    
+    // 验证币种格式
+    if (!newSymbol.endsWith('USDT')) {
+        showError('币种代码必须以USDT结尾');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/futures/symbols/add', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ symbol: newSymbol })
+        });
+        
+        if (response.ok) {
+            showSuccess(`币种 ${newSymbol} 添加成功`);
+            newSymbolInput.value = '';
+            // 重新加载币种列表
+            loadFuturesSymbols();
+        } else {
+            const error = await response.json();
+            showError(`添加币种失败: ${error.message}`);
+        }
+    } catch (error) {
+        console.error('添加币种出错:', error);
+        showError('添加币种时发生错误');
+    }
+}
+
+// 删除合约币种
+async function deleteFuturesSymbol(symbol) {
+    if (!confirm(`确定要删除币种 ${symbol} 吗？`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/futures/symbols/delete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ symbol: symbol })
+        });
+        
+        if (response.ok) {
+            showSuccess(`币种 ${symbol} 删除成功`);
+            // 重新加载币种列表
+            loadFuturesSymbols();
+        } else {
+            const error = await response.json();
+            showError(`删除币种失败: ${error.message}`);
+        }
+    } catch (error) {
+        console.error('删除币种出错:', error);
+        showError('删除币种时发生错误');
     }
 }
 
@@ -1240,6 +1385,150 @@ function displayFuturesBacktestResults(data) {
     
     // 显示回测结果
     document.getElementById('futures-backtest-results').style.display = 'block';
+}
+
+// 启用全部合约策略
+async function enableAllFuturesStrategies() {
+    try {
+        const response = await fetch('/api/futures/strategies/enable-all', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            showSuccess('已启用全部策略');
+            loadFuturesStrategies();
+        } else {
+            const error = await response.json();
+            showError(`启用全部策略失败: ${error.message}`);
+        }
+    } catch (error) {
+        console.error('启用全部策略出错:', error);
+        showError('启用全部策略时发生错误');
+    }
+}
+
+// 禁用全部合约策略
+async function disableAllFuturesStrategies() {
+    try {
+        const response = await fetch('/api/futures/strategies/disable-all', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            showSuccess('已禁用全部策略');
+            loadFuturesStrategies();
+        } else {
+            const error = await response.json();
+            showError(`禁用全部策略失败: ${error.message}`);
+        }
+    } catch (error) {
+        console.error('禁用全部策略出错:', error);
+        showError('禁用全部策略时发生错误');
+    }
+}
+
+// 更新合约策略统计信息
+function updateFuturesStrategyStatistics(strategies) {
+    const totalCountElement = document.getElementById('futures-total-strategies-count');
+    const enabledCountElement = document.getElementById('futures-enabled-strategies-count');
+    const avgReturnElement = document.getElementById('futures-avg-return');
+    const avgWinRateElement = document.getElementById('futures-avg-win-rate');
+
+    if (totalCountElement) {
+        totalCountElement.textContent = strategies ? strategies.length : 0;
+    }
+
+    if (enabledCountElement) {
+        const enabledCount = strategies ? strategies.filter(s => s.enabled).length : 0;
+        enabledCountElement.textContent = enabledCount;
+    }
+
+    if (avgReturnElement) {
+        avgReturnElement.textContent = '0%';
+    }
+
+    if (avgWinRateElement) {
+        avgWinRateElement.textContent = '0%';
+    }
+}
+
+// 更新合约交易控制面板中的启用币种显示
+function updateFuturesEnabledSymbolsDisplay() {
+    const enabledSymbolsDisplay = document.getElementById('futures-enabled-symbols-display');
+    if (!enabledSymbolsDisplay) return;
+    
+    // 获取当前启用的币种
+    const enabledSymbols = Array.from(
+        document.querySelectorAll('#futures-symbols-container input[type="checkbox"]:checked')
+    ).map(cb => cb.value);
+    
+    // 清空现有显示
+    enabledSymbolsDisplay.innerHTML = '';
+    
+    // 添加启用的币种作为标签
+    enabledSymbols.forEach(symbol => {
+        const tag = document.createElement('span');
+        tag.className = 'tag is-info';
+        tag.textContent = symbol.replace('USDT', '/USDT');
+        enabledSymbolsDisplay.appendChild(tag);
+    });
+    
+    // 如果没有启用的币种，显示提示信息
+    if (enabledSymbols.length === 0) {
+        const noSymbolsMsg = document.createElement('span');
+        noSymbolsMsg.className = 'has-text-grey-light';
+        noSymbolsMsg.textContent = '暂无启用的币种';
+        enabledSymbolsDisplay.appendChild(noSymbolsMsg);
+    }
+}
+
+
+// 切换合约策略状态
+async function toggleFuturesStrategy(strategyName, enabled) {
+    try {
+        const response = await fetch('/api/futures/strategies/update', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                strategy_name: strategyName,
+                enabled: enabled
+            })
+        });
+
+        if (response.ok) {
+            showSuccess(`策略 ${strategyName} ${enabled ? '已启用' : '已禁用'}`);
+            // 更新本地数据
+            const strategy = futuresStrategies.find(s => s.name === strategyName);
+            if (strategy) {
+                strategy.enabled = enabled;
+            }
+            updateFuturesStrategyStatistics(futuresStrategies);
+        } else {
+            const error = await response.json();
+            showError(`更新策略失败: ${error.message}`);
+            // 恢复复选框状态
+            const checkbox = document.querySelector(`input[onchange*="${strategyName}"]`);
+            if (checkbox) {
+                checkbox.checked = !enabled;
+            }
+        }
+    } catch (error) {
+        console.error('切换策略状态出错:', error);
+        showError('切换策略状态时发生错误');
+        // 恢复复选框状态
+        const checkbox = document.querySelector(`input[onchange*="${strategyName}"]`);
+        if (checkbox) {
+            checkbox.checked = !enabled;
+        }
+    }
 }
 
 // 在页面加载完成后初始化合约策略管理

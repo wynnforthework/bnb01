@@ -70,27 +70,15 @@
                     <div class="column is-3">
                         <label class="label">交易币种</label>
                         <div class="control">
-                            <div class="select is-fullwidth is-multiple">
-                                <select id="futures-symbols" multiple size="4" class="is-multiple">
-                                    <option value="BTCUSDT" selected>BTC/USDT</option>
-                                    <option value="ETHUSDT" selected>ETH/USDT</option>
-                                    <option value="BNBUSDT" selected>BNB/USDT</option>
-                                    <option value="ADAUSDT" selected>ADA/USDT</option>
-                                    <option value="DOGEUSDT">DOGE/USDT</option>
-                                    <option value="SOLUSDT">SOL/USDT</option>
-                                    <option value="DOTUSDT">DOT/USDT</option>
-                                    <option value="AVAXUSDT">AVAX/USDT</option>
-                                    <option value="LINKUSDT">LINK/USDT</option>
-                                    <option value="LTCUSDT">LTC/USDT</option>
-                                    <option value="XRPUSDT">XRP/USDT</option>
-                                    <option value="MATICUSDT">MATIC/USDT</option>
-                                    <option value="UNIUSDT">UNI/USDT</option>
-                                    <option value="ATOMUSDT">ATOM/USDT</option>
-                                    <option value="FILUSDT">FIL/USDT</option>
-                                </select>
+                            <div id="futures-enabled-symbols-display" class="tags">
+                                <span class="tag is-info">BTC/USDT</span>
+                                <span class="tag is-info">ETH/USDT</span>
+                                <span class="tag is-info">BNB/USDT</span>
+                                <span class="tag is-info">ADA/USDT</span>
+                                <span class="tag is-info">MATIC/USDT</span>
                             </div>
                         </div>
-                        <p class="help">按住Ctrl选择多个币种</p>
+                        <p class="help">币种管理中启用的币种</p>
                     </div>
                     <div class="column is-3">
                         <label class="label">当前状态</label>
@@ -316,9 +304,26 @@
                     <!-- 币种管理部分 -->
                     <div id="futures-symbols-section" class="mb-4">
                         <h6 class="title is-6 mb-3">选择交易币种</h6>
+                        
+                        <!-- 添加新币种 -->
+                        <div class="field has-addons mb-3">
+                            <div class="control is-expanded">
+                                <input class="input" type="text" id="futures-new-symbol" placeholder="输入币种代码，如: BTCUSDT">
+                            </div>
+                            <div class="control">
+                                <button id="add-futures-symbol" class="button is-success">
+                                    <span class="icon">
+                                        <i class="fas fa-plus"></i>
+                                    </span>
+                                    <span>添加币种</span>
+                                </button>
+                            </div>
+                        </div>
+                        
                         <div class="field is-grouped is-grouped-multiline" id="futures-symbols-container">
                             <!-- 币种选择框将在这里动态生成 -->
                         </div>
+                        
                         <div class="field mt-3">
                             <button id="update-futures-symbols" class="button is-primary">
                                 <span class="icon">
@@ -331,7 +336,49 @@
 
                     <!-- 策略控制部分 -->
                     <div id="futures-strategies-section" class="mb-4" style="display: none;">
-                        <h6 class="title is-6 mb-3">策略控制</h6>
+                        <div class="columns mb-4">
+                            <div class="column is-8">
+                                <h6 class="title is-6 mb-3">
+                                    <i class="fas fa-cogs"></i>
+                                    <span class="ml-2">策略控制</span>
+                                </h6>
+                            </div>
+                            <div class="column is-4 has-text-right">
+                                <div class="buttons">
+                                    <button class="button is-small is-success" onclick="enableAllFuturesStrategies()">
+                                        <span class="icon">
+                                            <i class="fas fa-check"></i>
+                                        </span>
+                                        <span>启用全部</span>
+                                    </button>
+                                    <button class="button is-small is-danger" onclick="disableAllFuturesStrategies()">
+                                        <span class="icon">
+                                            <i class="fas fa-times"></i>
+                                        </span>
+                                        <span>禁用全部</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 策略统计信息 -->
+                        <div class="notification is-info is-light mb-4">
+                            <div class="columns">
+                                <div class="column is-3">
+                                    <strong>总策略数:</strong> <span id="futures-total-strategies-count">0</span>
+                                </div>
+                                <div class="column is-3">
+                                    <strong>已启用:</strong> <span id="futures-enabled-strategies-count">0</span>
+                                </div>
+                                <div class="column is-3">
+                                    <strong>平均收益率:</strong> <span id="futures-avg-return">0%</span>
+                                </div>
+                                <div class="column is-3">
+                                    <strong>平均胜率:</strong> <span id="futures-avg-win-rate">0%</span>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <div class="field">
                             <label class="label">选择策略类型</label>
                             <div class="control">
@@ -359,6 +406,11 @@
                                 </span>
                                 <span>策略对比</span>
                             </button>
+                        </div>
+                        
+                        <!-- 策略列表容器 -->
+                        <div id="futures-strategies-container" class="mt-4">
+                            <!-- 策略列表将在这里动态生成 -->
                         </div>
                     </div>
 

@@ -21,5 +21,8 @@
   "default_leverage": 10,
   "max_spread_percent": 5,
   "min_balance_required": 50,
-  "updated_at": "2025-08-08T15:00:00.000000"
+  "updated_at": "2025-08-08T15:00:00.000000",
+  "enabled_strategies": [
+    "MA"
+  ]
 }

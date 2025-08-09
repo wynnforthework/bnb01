@@ -365,6 +365,73 @@ async function loadMarketData(symbol) {
     }
 }
 
+// 更新市场数据币种选择下拉框
+function updateMarketDataSymbolSelect() {
+    const symbolSelect = document.getElementById('symbol-select');
+    if (!symbolSelect) return;
+
+    // 清空现有选项
+    symbolSelect.innerHTML = '';
+
+    // 只添加已启用的币种
+    if (availableSymbols && availableSymbols.length > 0) {
+        availableSymbols.forEach(symbol => {
+            const option = document.createElement('option');
+            option.value = symbol;
+            option.textContent = symbol.replace('USDT', '/USDT');
+            symbolSelect.appendChild(option);
+        });
+
+        // 设置默认选择第一个
+        if (availableSymbols.length > 0) {
+            symbolSelect.value = availableSymbols[0];
+            currentSymbol = availableSymbols[0];
+        }
+    } else {
+        // 如果没有启用的币种，显示默认选项
+        const defaultSymbols = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT'];
+        defaultSymbols.forEach(symbol => {
+            const option = document.createElement('option');
+            option.value = symbol;
+            option.textContent = symbol.replace('USDT', '/USDT');
+            symbolSelect.appendChild(option);
+        });
+    }
+}
+
+// 更新数据收集币种选择下拉框
+function updateDataCollectionSymbolSelect() {
+    const collectSymbolSelect = document.getElementById('collect-symbol');
+    if (!collectSymbolSelect) return;
+
+    // 清空现有选项
+    collectSymbolSelect.innerHTML = '';
+
+    // 只添加已启用的币种
+    if (availableSymbols && availableSymbols.length > 0) {
+        availableSymbols.forEach(symbol => {
+            const option = document.createElement('option');
+            option.value = symbol;
+            option.textContent = symbol.replace('USDT', '/USDT');
+            collectSymbolSelect.appendChild(option);
+        });
+
+        // 设置默认选择第一个
+        if (availableSymbols.length > 0) {
+            collectSymbolSelect.value = availableSymbols[0];
+        }
+    } else {
+        // 如果没有启用的币种，显示默认选项
+        const defaultSymbols = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT'];
+        defaultSymbols.forEach(symbol => {
+            const option = document.createElement('option');
+            option.value = symbol;
+            option.textContent = symbol.replace('USDT', '/USDT');
+            collectSymbolSelect.appendChild(option);
+        });
+    }
+}
+
 // 显示市场图表
 function displayMarketChart(marketData, symbol) {
     const chartContainer = document.getElementById('price-chart');
@@ -1336,6 +1403,12 @@ function updateSymbolsDisplay() {
     console.log('✅ 币种显示已更新，HTML长度:', html.length);
     console.log('生成的HTML:', html.substring(0, 200) + '...');
     updateSymbolCount();
+    
+    // 更新市场数据币种选择下拉框
+    updateMarketDataSymbolSelect();
+    
+    // 更新数据收集币种选择下拉框
+    updateDataCollectionSymbolSelect();
 }
 
 // 更新币种计数

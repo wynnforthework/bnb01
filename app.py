@@ -1599,6 +1599,94 @@ def update_futures_symbols():
     except Exception as e:
         return jsonify({'success': False, 'message': f'更新币种选择失败: {str(e)}'})
 
+@app.route('/api/futures/symbols/add', methods=['POST'])
+def add_futures_symbol():
+    """添加合约交易币种"""
+    try:
+        data = request.get_json()
+        new_symbol = data.get('symbol', '').upper()
+        
+        if not new_symbol:
+            return jsonify({'success': False, 'message': '币种代码不能为空'})
+        
+        if not new_symbol.endswith('USDT'):
+            return jsonify({'success': False, 'message': '币种代码必须以USDT结尾'})
+        
+        global futures_config
+        if 'futures_config' not in globals():
+            futures_config = {}
+        
+        # 获取当前币种列表
+        current_symbols = futures_config.get('symbols', ['BTCUSDT', 'ETHUSDT', 'MATICUSDT', 'BNBUSDT', 'ADAUSDT'])
+        
+        # 检查币种是否已存在
+        if new_symbol in current_symbols:
+            return jsonify({'success': False, 'message': f'币种 {new_symbol} 已存在'})
+        
+        # 添加新币种
+        current_symbols.append(new_symbol)
+        futures_config['symbols'] = current_symbols
+        
+        # 保存到配置文件
+        try:
+            with open('futures_config.json', 'w') as f:
+                json.dump(futures_config, f, indent=2)
+        except Exception as save_error:
+            print(f"保存配置失败: {save_error}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'币种 {new_symbol} 添加成功',
+            'symbols': current_symbols
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'添加币种失败: {str(e)}'})
+
+@app.route('/api/futures/symbols/delete', methods=['POST'])
+def delete_futures_symbol():
+    """删除合约交易币种"""
+    try:
+        data = request.get_json()
+        symbol_to_delete = data.get('symbol', '').upper()
+        
+        if not symbol_to_delete:
+            return jsonify({'success': False, 'message': '币种代码不能为空'})
+        
+        global futures_config
+        if 'futures_config' not in globals():
+            futures_config = {}
+        
+        # 获取当前币种列表
+        current_symbols = futures_config.get('symbols', ['BTCUSDT', 'ETHUSDT', 'MATICUSDT', 'BNBUSDT', 'ADAUSDT'])
+        
+        # 检查币种是否存在
+        if symbol_to_delete not in current_symbols:
+            return jsonify({'success': False, 'message': f'币种 {symbol_to_delete} 不存在'})
+        
+        # 检查是否为默认币种（不允许删除）
+        default_symbols = ['BTCUSDT', 'ETHUSDT']
+        if symbol_to_delete in default_symbols:
+            return jsonify({'success': False, 'message': f'币种 {symbol_to_delete} 为默认币种，不能删除'})
+        
+        # 删除币种
+        current_symbols.remove(symbol_to_delete)
+        futures_config['symbols'] = current_symbols
+        
+        # 保存到配置文件
+        try:
+            with open('futures_config.json', 'w') as f:
+                json.dump(futures_config, f, indent=2)
+        except Exception as save_error:
+            print(f"保存配置失败: {save_error}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'币种 {symbol_to_delete} 删除成功',
+            'symbols': current_symbols
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'删除币种失败: {str(e)}'})
+
 @app.route('/api/futures/strategies/status')
 def get_futures_strategies_status():
     """获取合约策略状态"""
@@ -1920,6 +2008,119 @@ def broadcast_updates():
         except Exception as e:
             print(f"广播更新错误: {e}")
             socketio.sleep(10)
+
+@app.route('/api/futures/strategies/enable-all', methods=['POST'])
+def enable_all_futures_strategies():
+    """启用全部合约策略"""
+    try:
+        global futures_config
+        if 'futures_config' not in globals():
+            futures_config = {}
+        
+        # 获取所有策略
+        strategies = get_futures_strategies()
+        
+        # 启用所有策略
+        for strategy in strategies:
+            strategy['enabled'] = True
+        
+        # 更新配置
+        futures_config['strategies'] = strategies
+        
+        # 保存到配置文件
+        try:
+            with open('futures_config.json', 'w') as f:
+                json.dump(futures_config, f, indent=2)
+        except Exception as save_error:
+            print(f"保存配置失败: {save_error}")
+        
+        return jsonify({
+            'success': True,
+            'message': '已启用全部策略',
+            'strategies': strategies
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'启用全部策略失败: {str(e)}'})
+
+@app.route('/api/futures/strategies/disable-all', methods=['POST'])
+def disable_all_futures_strategies():
+    """禁用全部合约策略"""
+    try:
+        global futures_config
+        if 'futures_config' not in globals():
+            futures_config = {}
+        
+        # 获取所有策略
+        strategies = get_futures_strategies()
+        
+        # 禁用所有策略
+        for strategy in strategies:
+            strategy['enabled'] = False
+        
+        # 更新配置
+        futures_config['strategies'] = strategies
+        
+        # 保存到配置文件
+        try:
+            with open('futures_config.json', 'w') as f:
+                json.dump(futures_config, f, indent=2)
+        except Exception as save_error:
+            print(f"保存配置失败: {save_error}")
+        
+        return jsonify({
+            'success': True,
+            'message': '已禁用全部策略',
+            'strategies': strategies
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'禁用全部策略失败: {str(e)}'})
+
+@app.route('/api/futures/strategies/update', methods=['POST'])
+def update_futures_strategy():
+    """更新单个合约策略状态"""
+    try:
+        data = request.get_json()
+        strategy_name = data.get('strategy_name')
+        enabled = data.get('enabled')
+        
+        if strategy_name is None or enabled is None:
+            return jsonify({'success': False, 'message': '参数不完整'})
+        
+        global futures_config
+        if 'futures_config' not in globals():
+            futures_config = {}
+        
+        # 获取所有策略
+        strategies = get_futures_strategies()
+        
+        # 更新指定策略
+        strategy_found = False
+        for strategy in strategies:
+            if strategy['name'] == strategy_name:
+                strategy['enabled'] = enabled
+                strategy_found = True
+                break
+        
+        if not strategy_found:
+            return jsonify({'success': False, 'message': f'策略 {strategy_name} 不存在'})
+        
+        # 更新配置
+        futures_config['strategies'] = strategies
+        
+        # 保存到配置文件
+        try:
+            with open('futures_config.json', 'w') as f:
+                json.dump(futures_config, f, indent=2)
+        except Exception as save_error:
+            print(f"保存配置失败: {save_error}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'策略 {strategy_name} 已{"启用" if enabled else "禁用"}',
+            'strategy': next(s for s in strategies if s['name'] == strategy_name)
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'更新策略失败: {str(e)}'})
 
 if __name__ == '__main__':
     # 启动实时更新线程
