@@ -880,3 +880,374 @@ document.addEventListener('DOMContentLoaded', function() {
         loadSavedConfig();
     }, 2000);
 });
+
+// ==================== 合约策略管理功能 ====================
+
+// 初始化合约策略管理
+function initializeFuturesStrategyManagement() {
+    // 绑定策略管理相关事件
+    bindFuturesStrategyEvents();
+    
+    // 加载初始数据
+    loadFuturesStrategiesStatus();
+    loadFuturesSymbols();
+}
+
+// 绑定合约策略管理事件
+function bindFuturesStrategyEvents() {
+    // 显示/隐藏不同部分
+    document.getElementById('show-futures-symbols').addEventListener('click', function() {
+        showFuturesSection('futures-symbols-section');
+    });
+    
+    document.getElementById('show-futures-strategies').addEventListener('click', function() {
+        showFuturesSection('futures-strategies-section');
+    });
+    
+    document.getElementById('show-futures-backtest').addEventListener('click', function() {
+        showFuturesSection('futures-backtest-section');
+    });
+    
+    // 保存币种选择
+    document.getElementById('update-futures-symbols').addEventListener('click', function() {
+        updateFuturesSymbols();
+    });
+    
+    // 更新策略
+    document.getElementById('update-futures-strategies').addEventListener('click', function() {
+        updateFuturesStrategies();
+    });
+    
+    // 策略对比
+    document.getElementById('compare-futures-strategies').addEventListener('click', function() {
+        compareFuturesStrategies();
+    });
+    
+    // 运行回测
+    document.getElementById('run-futures-backtest').addEventListener('click', function() {
+        runFuturesBacktest();
+    });
+}
+
+// 显示指定的合约策略管理部分
+function showFuturesSection(sectionId) {
+    // 隐藏所有部分
+    const sections = ['futures-symbols-section', 'futures-strategies-section', 'futures-backtest-section'];
+    sections.forEach(id => {
+        document.getElementById(id).style.display = 'none';
+    });
+    
+    // 显示指定部分
+    document.getElementById(sectionId).style.display = 'block';
+    
+    // 更新按钮状态
+    updateFuturesSectionButtons(sectionId);
+}
+
+// 更新合约策略管理按钮状态
+function updateFuturesSectionButtons(activeSection) {
+    const buttons = {
+        'futures-symbols-section': 'show-futures-symbols',
+        'futures-strategies-section': 'show-futures-strategies',
+        'futures-backtest-section': 'show-futures-backtest'
+    };
+    
+    Object.entries(buttons).forEach(([section, buttonId]) => {
+        const button = document.getElementById(buttonId);
+        if (section === activeSection) {
+            button.classList.remove('is-outlined');
+            button.classList.add('is-primary');
+        } else {
+            button.classList.remove('is-primary');
+            button.classList.add('is-outlined');
+        }
+    });
+}
+
+// 加载合约币种列表
+async function loadFuturesSymbols() {
+    try {
+        const response = await fetch('/api/futures/symbols');
+        if (response.ok) {
+            const data = await response.json();
+            displayFuturesSymbols(data.symbols || []);
+        } else {
+            console.error('加载合约币种失败:', response.statusText);
+        }
+    } catch (error) {
+        console.error('加载合约币种出错:', error);
+    }
+}
+
+// 显示合约币种选择框
+function displayFuturesSymbols(symbols) {
+    const container = document.getElementById('futures-symbols-container');
+    container.innerHTML = '';
+    
+    const defaultSymbols = ['BTCUSDT', 'ETHUSDT', 'MATICUSDT', 'BNBUSDT', 'ADAUSDT'];
+    
+    defaultSymbols.forEach(symbol => {
+        const isSelected = symbols.includes(symbol);
+        const symbolDiv = document.createElement('div');
+        symbolDiv.className = 'control';
+        symbolDiv.innerHTML = `
+            <label class="checkbox">
+                <input type="checkbox" value="${symbol}" ${isSelected ? 'checked' : ''}>
+                <span class="ml-2">${symbol}</span>
+            </label>
+        `;
+        container.appendChild(symbolDiv);
+    });
+}
+
+// 更新合约币种选择
+async function updateFuturesSymbols() {
+    const selectedSymbols = Array.from(
+        document.querySelectorAll('#futures-symbols-container input[type="checkbox"]:checked')
+    ).map(cb => cb.value);
+    
+    try {
+        const response = await fetch('/api/futures/symbols/update', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ symbols: selectedSymbols })
+        });
+        
+        if (response.ok) {
+            showSuccess('币种选择已更新');
+            loadFuturesStrategiesStatus();
+        } else {
+            const error = await response.json();
+            showError(`更新币种选择失败: ${error.message}`);
+        }
+    } catch (error) {
+        console.error('更新币种选择出错:', error);
+        showError('更新币种选择时发生错误');
+    }
+}
+
+// 加载合约策略状态
+async function loadFuturesStrategiesStatus() {
+    try {
+        const response = await fetch('/api/futures/strategies/status');
+        if (response.ok) {
+            const data = await response.json();
+            displayFuturesStrategiesStatus(data);
+        } else {
+            console.error('加载合约策略状态失败:', response.statusText);
+        }
+    } catch (error) {
+        console.error('加载合约策略状态出错:', error);
+    }
+}
+
+// 显示合约策略状态
+function displayFuturesStrategiesStatus(data) {
+    const container = document.getElementById('futures-strategies-status');
+    const { enabledStrategies = [], selectedSymbols = [] } = data;
+    
+    let html = '<div class="columns is-multiline">';
+    
+    // 显示启用的策略
+    html += '<div class="column is-6">';
+    html += '<h6 class="title is-6">启用的策略</h6>';
+    if (enabledStrategies.length > 0) {
+        enabledStrategies.forEach(strategy => {
+            html += `<span class="tag is-info mr-2 mb-2">${strategy}</span>`;
+        });
+    } else {
+        html += '<p class="has-text-grey">暂无启用的策略</p>';
+    }
+    html += '</div>';
+    
+    // 显示选中的币种
+    html += '<div class="column is-6">';
+    html += '<h6 class="title is-6">选中的币种</h6>';
+    if (selectedSymbols.length > 0) {
+        selectedSymbols.forEach(symbol => {
+            html += `<span class="tag is-success mr-2 mb-2">${symbol}</span>`;
+        });
+    } else {
+        html += '<p class="has-text-grey">暂无选中的币种</p>';
+    }
+    html += '</div>';
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+// 更新合约策略
+async function updateFuturesStrategies() {
+    const strategyType = document.getElementById('futures-strategy-type').value;
+    
+    try {
+        const response = await fetch('/api/futures/strategies/update', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ strategy_type: strategyType })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            showSuccess(`策略更新成功，共处理 ${data.total_symbols} 个币种`);
+            loadFuturesStrategiesStatus();
+        } else {
+            const error = await response.json();
+            showError(`策略更新失败: ${error.message}`);
+        }
+    } catch (error) {
+        console.error('更新合约策略出错:', error);
+        showError('更新策略时发生错误');
+    }
+}
+
+// 对比合约策略
+async function compareFuturesStrategies() {
+    try {
+        showSuccess('开始策略对比分析...');
+        
+        const response = await fetch('/api/futures/strategies/compare', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            displayFuturesStrategyComparison(data);
+        } else {
+            const error = await response.json();
+            showError(`策略对比失败: ${error.message}`);
+        }
+    } catch (error) {
+        console.error('合约策略对比出错:', error);
+        showError('策略对比时发生错误');
+    }
+}
+
+// 显示合约策略对比结果
+function displayFuturesStrategyComparison(data) {
+    const container = document.getElementById('futures-backtest-table');
+    
+    if (!data || !data.results || data.results.length === 0) {
+        container.innerHTML = '<p class="has-text-grey">暂无策略对比数据</p>';
+        return;
+    }
+    
+    let html = '<div class="table-container">';
+    html += '<table class="table is-fullwidth is-striped">';
+    html += '<thead><tr>';
+    html += '<th>策略类型</th>';
+    html += '<th>币种</th>';
+    html += '<th>总收益率</th>';
+    html += '<th>胜率</th>';
+    html += '<th>交易次数</th>';
+    html += '<th>夏普比率</th>';
+    html += '</tr></thead><tbody>';
+    
+    data.results.forEach(result => {
+        const returnPercent = (result.total_return * 100).toFixed(2);
+        const winRate = (result.win_rate * 100).toFixed(1);
+        const sharpeRatio = result.sharpe_ratio ? result.sharpe_ratio.toFixed(2) : 'N/A';
+        
+        html += `<tr>`;
+        html += `<td><span class="tag is-info">${result.strategy_type}</span></td>`;
+        html += `<td>${result.symbol}</td>`;
+        html += `<td class="${returnPercent >= 0 ? 'has-text-success' : 'has-text-danger'}">${returnPercent}%</td>`;
+        html += `<td>${winRate}%</td>`;
+        html += `<td>${result.trade_count}</td>`;
+        html += `<td>${sharpeRatio}</td>`;
+        html += `</tr>`;
+    });
+    
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+    
+    // 显示回测结果
+    document.getElementById('futures-backtest-results').style.display = 'block';
+}
+
+// 运行合约回测
+async function runFuturesBacktest() {
+    try {
+        showSuccess('开始运行回测...');
+        
+        const response = await fetch('/api/futures/backtest/run', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            displayFuturesBacktestResults(data);
+        } else {
+            const error = await response.json();
+            showError(`回测运行失败: ${error.message}`);
+        }
+    } catch (error) {
+        console.error('运行合约回测出错:', error);
+        showError('运行回测时发生错误');
+    }
+}
+
+// 显示合约回测结果
+function displayFuturesBacktestResults(data) {
+    const container = document.getElementById('futures-backtest-table');
+    
+    if (!data || !data.results || data.results.length === 0) {
+        container.innerHTML = '<p class="has-text-grey">暂无回测数据</p>';
+        return;
+    }
+    
+    let html = '<div class="table-container">';
+    html += '<table class="table is-fullwidth is-striped">';
+    html += '<thead><tr>';
+    html += '<th>币种</th>';
+    html += '<th>策略类型</th>';
+    html += '<th>总收益率</th>';
+    html += '<th>胜率</th>';
+    html += '<th>交易次数</th>';
+    html += '<th>最大回撤</th>';
+    html += '<th>夏普比率</th>';
+    html += '</tr></thead><tbody>';
+    
+    data.results.forEach(result => {
+        const returnPercent = (result.total_return * 100).toFixed(2);
+        const winRate = (result.win_rate * 100).toFixed(1);
+        const maxDrawdown = result.max_drawdown ? (result.max_drawdown * 100).toFixed(2) : 'N/A';
+        const sharpeRatio = result.sharpe_ratio ? result.sharpe_ratio.toFixed(2) : 'N/A';
+        
+        html += `<tr>`;
+        html += `<td><strong>${result.symbol}</strong></td>`;
+        html += `<td><span class="tag is-info">${result.strategy_type}</span></td>`;
+        html += `<td class="${returnPercent >= 0 ? 'has-text-success' : 'has-text-danger'}">${returnPercent}%</td>`;
+        html += `<td>${winRate}%</td>`;
+        html += `<td>${result.trade_count}</td>`;
+        html += `<td class="has-text-warning">${maxDrawdown}%</td>`;
+        html += `<td>${sharpeRatio}</td>`;
+        html += `</tr>`;
+    });
+    
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+    
+    // 显示回测结果
+    document.getElementById('futures-backtest-results').style.display = 'block';
+}
+
+// 在页面加载完成后初始化合约策略管理
+document.addEventListener('DOMContentLoaded', function() {
+    // 延迟初始化，确保DOM完全加载
+    setTimeout(() => {
+        if (document.getElementById('show-futures-symbols')) {
+            initializeFuturesStrategyManagement();
+        }
+    }, 100);
+});

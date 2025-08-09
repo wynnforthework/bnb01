@@ -580,10 +580,13 @@ def update_spot_strategies():
         
         # 使用真实的回测引擎
         results = []
+        total_strategies = 0
+        
         for symbol in symbols:
             symbol_results = []
             for strategy_type in spot_config['strategy_types']:
                 strategy_key = f"{symbol}_{strategy_type}"
+                total_strategies += 1
                 
                 try:
                     # 运行真实回测
@@ -591,7 +594,7 @@ def update_spot_strategies():
                     backtest_result['strategy_key'] = strategy_key
                     backtest_result['enabled'] = True  # 默认启用
                     
-                    # 更新启用状态
+                    # 更新启用状态到spot_config
                     spot_config['enabled_strategies'][strategy_key] = True
                     symbol_results.append(backtest_result)
                     
@@ -610,6 +613,8 @@ def update_spot_strategies():
                         'enabled': True,
                         'error': str(e)
                     }
+                    # 即使回测失败，也设置为启用状态
+                    spot_config['enabled_strategies'][strategy_key] = True
                     symbol_results.append(backtest_result)
             
             results.append({
@@ -617,10 +622,17 @@ def update_spot_strategies():
                 'strategies': symbol_results
             })
         
+        # 计算启用的策略数量
+        enabled_count = len([k for k, v in spot_config['enabled_strategies'].items() if v])
+        
+        print(f"策略更新完成，总策略数量: {total_strategies}, 启用策略数量: {enabled_count}")
+        
         return jsonify({
             'success': True,
-            'message': f'策略更新完成，共 {len(symbols) * len(spot_config["strategy_types"])} 个策略',
-            'results': results
+            'message': f'策略更新完成，共 {total_strategies} 个策略，启用 {enabled_count} 个',
+            'results': results,
+            'enabled_count': enabled_count,
+            'total_count': total_strategies
         })
     except Exception as e:
         return jsonify({'success': False, 'message': f'更新策略失败: {str(e)}'})
@@ -796,16 +808,40 @@ def manage_spot_strategies():
         action = data.get('action')
         
         if action == 'enable_all':
+            # 启用所有策略
             for symbol in spot_config['symbols']:
                 for strategy_type in spot_config['strategy_types']:
-                    spot_config['enabled_strategies'][f"{symbol}_{strategy_type}"] = True
-            return jsonify({'success': True, 'message': '已启用全部策略'})
+                    strategy_key = f"{symbol}_{strategy_type}"
+                    spot_config['enabled_strategies'][strategy_key] = True
+            
+            enabled_count = len([k for k, v in spot_config['enabled_strategies'].items() if v])
+            total_count = len(spot_config['symbols']) * len(spot_config['strategy_types'])
+            
+            print(f"已启用全部策略，启用数量: {enabled_count}, 总数量: {total_count}")
+            return jsonify({
+                'success': True, 
+                'message': f'已启用全部策略，共 {enabled_count} 个',
+                'enabled_count': enabled_count,
+                'total_count': total_count
+            })
         
         elif action == 'disable_all':
+            # 禁用所有策略
             for symbol in spot_config['symbols']:
                 for strategy_type in spot_config['strategy_types']:
-                    spot_config['enabled_strategies'][f"{symbol}_{strategy_type}"] = False
-            return jsonify({'success': True, 'message': '已禁用全部策略'})
+                    strategy_key = f"{symbol}_{strategy_type}"
+                    spot_config['enabled_strategies'][strategy_key] = False
+            
+            enabled_count = len([k for k, v in spot_config['enabled_strategies'].items() if v])
+            total_count = len(spot_config['symbols']) * len(spot_config['strategy_types'])
+            
+            print(f"已禁用全部策略，启用数量: {enabled_count}, 总数量: {total_count}")
+            return jsonify({
+                'success': True, 
+                'message': f'已禁用全部策略，共 {total_count} 个',
+                'enabled_count': enabled_count,
+                'total_count': total_count
+            })
         
         elif action == 'toggle':
             strategy_key = data.get('strategy_key')
@@ -813,7 +849,17 @@ def manage_spot_strategies():
                 current_status = spot_config['enabled_strategies'].get(strategy_key, False)
                 spot_config['enabled_strategies'][strategy_key] = not current_status
                 status = '启用' if spot_config['enabled_strategies'][strategy_key] else '禁用'
-                return jsonify({'success': True, 'message': f'策略已{status}'})
+                
+                enabled_count = len([k for k, v in spot_config['enabled_strategies'].items() if v])
+                total_count = len(spot_config['symbols']) * len(spot_config['strategy_types'])
+                
+                print(f"策略 {strategy_key} 已{status}，启用数量: {enabled_count}, 总数量: {total_count}")
+                return jsonify({
+                    'success': True, 
+                    'message': f'策略已{status}',
+                    'enabled_count': enabled_count,
+                    'total_count': total_count
+                })
         
         return jsonify({'success': False, 'message': '无效操作'})
     except Exception as e:
@@ -825,19 +871,20 @@ def get_spot_strategies_status():
     try:
         # 获取所有策略
         strategies = {}
-        for strategy_type in spot_config['strategy_types']:
-            strategies[strategy_type] = {
-                'enabled': user_state.get('enabled_strategies', {}).get(strategy_type, False),
-                'symbols': user_state.get('selected_symbols', spot_config['symbols'])
-            }
+        enabled_count = 0
         
-        enabled_count = len([s for s in strategies.values() if s['enabled']])
-        total_count = len(strategies)
+        # 计算实际的启用策略数量
+        for strategy_key, is_enabled in spot_config['enabled_strategies'].items():
+            if is_enabled:
+                enabled_count += 1
+        
+        # 计算总策略数量（币种数量 × 策略类型数量）
+        total_count = len(spot_config['symbols']) * len(spot_config['strategy_types'])
         
         return jsonify({
             'success': True,
-            'symbols': user_state.get('selected_symbols', spot_config['symbols']),
-            'enabled_strategies': user_state.get('enabled_strategies', {}),
+            'symbols': spot_config['symbols'],
+            'enabled_strategies': spot_config['enabled_strategies'],
             'trading_status': spot_config['trading_status'],
             'enabled_count': enabled_count,
             'total_count': total_count
@@ -898,17 +945,26 @@ def save_user_state():
 def start_spot_trading():
     """启动现货交易"""
     try:
+        # 获取启用的策略
         enabled_strategies = [k for k, v in spot_config['enabled_strategies'].items() if v]
         
         if not enabled_strategies:
             return jsonify({'success': False, 'message': '请先启用至少一个策略'})
         
+        # 更新交易状态
         spot_config['trading_status'] = 'running'
+        
+        # 记录启动信息
+        print(f"现货交易已启动，启用策略: {enabled_strategies}")
+        print(f"启用策略数量: {len(enabled_strategies)}")
+        print(f"总策略数量: {len(spot_config['symbols']) * len(spot_config['strategy_types'])}")
         
         return jsonify({
             'success': True,
             'message': f'现货交易已启动，启用 {len(enabled_strategies)} 个策略',
-            'enabled_strategies': enabled_strategies
+            'enabled_strategies': enabled_strategies,
+            'enabled_count': len(enabled_strategies),
+            'total_count': len(spot_config['symbols']) * len(spot_config['strategy_types'])
         })
     except Exception as e:
         return jsonify({'success': False, 'message': f'启动交易失败: {str(e)}'})
@@ -925,16 +981,25 @@ def stop_spot_trading():
 @app.route('/api/spot/trading/status')
 def get_spot_trading_status():
     """获取现货交易状态"""
-    enabled_count = sum(spot_config['enabled_strategies'].values())
-    total_count = len(spot_config['symbols']) * len(spot_config['strategy_types'])
-    
-    return jsonify({
-        'success': True,
-        'trading': spot_config['trading_status'] == 'running',
-        'enabled_strategies': enabled_count,
-        'total_strategies': total_count,
-        'symbols_count': len(spot_config['symbols'])
-    })
+    try:
+        # 计算策略数量
+        enabled_count = len([k for k, v in spot_config['enabled_strategies'].items() if v])
+        total_count = len(spot_config['symbols']) * len(spot_config['strategy_types'])
+        
+        return jsonify({
+            'success': True,
+            'trading': spot_config['trading_status'] == 'running',
+            'trading_status': spot_config['trading_status'],
+            'enabled_strategies': spot_config['enabled_strategies'],
+            'enabled_count': enabled_count,
+            'total_count': total_count,
+            'symbols': spot_config['symbols']
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'获取交易状态失败: {str(e)}'
+        })
 
 # ========== 合约交易API端点 ==========
 
@@ -1487,6 +1552,317 @@ def run_backtest():
         
     except Exception as e:
         return jsonify({'success': False, 'message': f'回测失败: {str(e)}'})
+
+# ========== 合约策略管理API端点 ==========
+
+@app.route('/api/futures/symbols')
+def get_futures_symbols():
+    """获取合约交易币种列表"""
+    try:
+        # 从配置中获取币种列表
+        symbols = futures_config.get('symbols', ['BTCUSDT', 'ETHUSDT', 'MATICUSDT', 'BNBUSDT', 'ADAUSDT'])
+        return jsonify({
+            'success': True,
+            'symbols': symbols
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'获取币种列表失败: {str(e)}'})
+
+@app.route('/api/futures/symbols/update', methods=['POST'])
+def update_futures_symbols():
+    """更新合约交易币种选择"""
+    try:
+        data = request.get_json()
+        symbols = data.get('symbols', [])
+        
+        if not symbols:
+            return jsonify({'success': False, 'message': '请至少选择一个币种'})
+        
+        # 更新配置
+        global futures_config
+        if 'futures_config' not in globals():
+            futures_config = {}
+        
+        futures_config['symbols'] = symbols
+        
+        # 保存到配置文件
+        try:
+            with open('futures_config.json', 'w') as f:
+                json.dump(futures_config, f, indent=2)
+        except Exception as save_error:
+            print(f"保存配置失败: {save_error}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'币种选择已更新: {", ".join(symbols)}'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'更新币种选择失败: {str(e)}'})
+
+@app.route('/api/futures/strategies/status')
+def get_futures_strategies_status():
+    """获取合约策略状态"""
+    try:
+        global futures_config
+        
+        # 获取启用的策略类型
+        enabled_strategies = futures_config.get('enabled_strategies', ['MA', 'RSI', 'ML', 'Chanlun'])
+        
+        # 获取选中的币种
+        selected_symbols = futures_config.get('symbols', ['BTCUSDT', 'ETHUSDT'])
+        
+        return jsonify({
+            'success': True,
+            'enabledStrategies': enabled_strategies,
+            'selectedSymbols': selected_symbols
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'获取策略状态失败: {str(e)}'})
+
+@app.route('/api/futures/strategies/update', methods=['POST'])
+def update_futures_strategies():
+    """更新合约策略"""
+    try:
+        data = request.get_json()
+        strategy_type = data.get('strategy_type', 'MA')
+        
+        global futures_config
+        if 'futures_config' not in globals():
+            futures_config = {}
+        
+        # 获取选中的币种
+        symbols = futures_config.get('symbols', ['BTCUSDT', 'ETHUSDT'])
+        
+        if not symbols:
+            return jsonify({'success': False, 'message': '请先选择交易币种'})
+        
+        # 更新启用的策略类型
+        if 'enabled_strategies' not in futures_config:
+            futures_config['enabled_strategies'] = []
+        
+        if strategy_type not in futures_config['enabled_strategies']:
+            futures_config['enabled_strategies'].append(strategy_type)
+        
+        # 保存配置
+        try:
+            with open('futures_config.json', 'w') as f:
+                json.dump(futures_config, f, indent=2)
+        except Exception as save_error:
+            print(f"保存配置失败: {save_error}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'策略 {strategy_type} 已启用',
+            'total_symbols': len(symbols)
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'更新策略失败: {str(e)}'})
+
+@app.route('/api/futures/strategies/compare', methods=['POST'])
+def compare_futures_strategies():
+    """对比合约策略"""
+    try:
+        global futures_config
+        
+        # 获取选中的币种和启用的策略
+        symbols = futures_config.get('symbols', ['BTCUSDT', 'ETHUSDT'])
+        enabled_strategies = futures_config.get('enabled_strategies', ['MA', 'RSI', 'ML', 'Chanlun'])
+        
+        if not symbols:
+            return jsonify({'success': False, 'message': '请先选择交易币种'})
+        
+        results = []
+        
+        # 为每个币种和策略类型运行回测
+        for symbol in symbols:
+            for strategy_type in enabled_strategies:
+                try:
+                    # 运行回测
+                    backtest_result = run_futures_strategy_backtest(symbol, strategy_type)
+                    if backtest_result:
+                        results.append(backtest_result)
+                except Exception as e:
+                    print(f"策略对比失败 {symbol} {strategy_type}: {e}")
+                    continue
+        
+        return jsonify({
+            'success': True,
+            'results': results,
+            'total_combinations': len(symbols) * len(enabled_strategies)
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'策略对比失败: {str(e)}'})
+
+@app.route('/api/futures/backtest/run', methods=['POST'])
+def run_futures_backtest():
+    """运行合约回测"""
+    try:
+        global futures_config
+        
+        # 获取选中的币种和启用的策略
+        symbols = futures_config.get('symbols', ['BTCUSDT', 'ETHUSDT'])
+        enabled_strategies = futures_config.get('enabled_strategies', ['MA', 'RSI', 'ML', 'Chanlun'])
+        
+        if not symbols:
+            return jsonify({'success': False, 'message': '请先选择交易币种'})
+        
+        results = []
+        
+        # 为每个币种和策略类型运行回测
+        for symbol in symbols:
+            for strategy_type in enabled_strategies:
+                try:
+                    # 运行回测
+                    backtest_result = run_futures_strategy_backtest(symbol, strategy_type)
+                    if backtest_result:
+                        results.append(backtest_result)
+                except Exception as e:
+                    print(f"回测失败 {symbol} {strategy_type}: {e}")
+                    continue
+        
+        return jsonify({
+            'success': True,
+            'results': results,
+            'total_combinations': len(symbols) * len(enabled_strategies)
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'运行回测失败: {str(e)}'})
+
+def run_futures_strategy_backtest(symbol, strategy_type):
+    """运行单个合约策略回测"""
+    try:
+        from datetime import datetime, timedelta
+        from backend.data_collector import DataCollector
+        from backend.backtesting import BacktestEngine
+        
+        # 初始化数据收集器
+        dc = DataCollector()
+        
+        # 获取历史数据
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=30)
+        
+        # 检查可用数据
+        available_data = dc.get_market_data(symbol, '1h', limit=1000)
+        
+        if available_data.empty:
+            # 如果没有数据，先尝试收集数据
+            print(f"⚠️ {symbol} 没有历史数据，尝试收集...")
+            try:
+                import asyncio
+                # 创建新的事件循环来运行异步函数
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    # 收集最近30天的数据
+                    collected_data = loop.run_until_complete(
+                        dc.collect_historical_data(symbol, '1h', days=30)
+                    )
+                    if not collected_data.empty:
+                        print(f"✅ {symbol} 数据收集成功，获得 {len(collected_data)} 条记录")
+                        available_data = dc.get_market_data(symbol, '1h', limit=1000)
+                    else:
+                        print(f"❌ {symbol} 数据收集失败")
+                finally:
+                    loop.close()
+            except Exception as e:
+                print(f"❌ {symbol} 数据收集过程中出错: {e}")
+        
+        if available_data.empty:
+            # 如果仍然没有数据，使用最近7天作为默认范围
+            start_date = end_date - timedelta(days=7)
+            print(f"⚠️ {symbol} 使用默认日期范围: {start_date} 到 {end_date}")
+        else:
+            # 使用数据库中实际可用的数据范围
+            start_date = available_data['timestamp'].min()
+            end_date = available_data['timestamp'].max()
+            print(f"✅ {symbol} 使用实际数据范围: {start_date} 到 {end_date}")
+        
+        # 根据策略类型创建策略实例
+        if strategy_type == 'MA':
+            from strategies.ma_strategy import MovingAverageStrategy
+            strategy = MovingAverageStrategy(symbol, {
+                'short_window': 10,
+                'long_window': 20,
+                'stop_loss': 0.02,
+                'take_profit': 0.05,
+                'position_size': 0.1
+            })
+            parameters = {'short_window': 10, 'long_window': 20}
+        elif strategy_type == 'RSI':
+            from strategies.rsi_strategy import RSIStrategy
+            strategy = RSIStrategy(symbol, {
+                'rsi_period': 14,
+                'oversold': 30,
+                'overbought': 70,
+                'stop_loss': 0.02,
+                'take_profit': 0.05,
+                'position_size': 0.1
+            })
+            parameters = {'period': 14, 'overbought': 70, 'oversold': 30}
+        elif strategy_type == 'ML':
+            from strategies.ml_strategy import MLStrategy
+            strategy = MLStrategy(symbol, {
+                'model_type': 'random_forest',
+                'lookback_period': 30,
+                'prediction_horizon': 1,
+                'min_confidence': 0.65,
+                'up_threshold': 0.015,
+                'down_threshold': -0.015,
+                'stop_loss': 0.03,
+                'take_profit': 0.06,
+                'position_size': 0.05
+            })
+            parameters = {'model_type': 'random_forest'}
+        elif strategy_type == 'Chanlun':
+            from strategies.chanlun_strategy import ChanlunStrategy
+            strategy = ChanlunStrategy(symbol, {
+                'timeframes': ['30m', '1h', '4h'],
+                'min_swing_length': 2,
+                'central_bank_min_bars': 2,
+                'macd_fast': 12,
+                'macd_slow': 26,
+                'macd_signal': 9,
+                'rsi_period': 14,
+                'ma_short': 5,
+                'ma_long': 20,
+                'position_size': 0.2,
+                'max_position': 0.8,
+                'stop_loss': 0.04,
+                'take_profit': 0.08,
+                'trend_confirmation': 0.01,
+                'divergence_threshold': 0.05
+            })
+            parameters = {}
+        else:
+            print(f"❌ 不支持的策略类型: {strategy_type}")
+            return None
+        
+        # 运行回测
+        backtest_engine = BacktestEngine()
+        backtest_result = backtest_engine.run_backtest(
+            strategy=strategy,
+            data=available_data,
+            start_date=start_date,
+            end_date=end_date,
+            initial_capital=10000
+        )
+        
+        if backtest_result:
+            return {
+                'symbol': symbol,
+                'strategy_type': strategy_type,
+                'total_return': backtest_result.get('total_return', 0),
+                'win_rate': backtest_result.get('win_rate', 0),
+                'trade_count': backtest_result.get('trade_count', 0),
+                'max_drawdown': backtest_result.get('max_drawdown', 0),
+                'sharpe_ratio': backtest_result.get('sharpe_ratio', 0),
+                'parameters': parameters
+            }
+        
+    except Exception as e:
+        print(f"回测执行失败 {symbol} {strategy_type}: {e}")
+        return None
 
 # 创建models目录
 import os

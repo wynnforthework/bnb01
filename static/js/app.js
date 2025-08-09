@@ -149,6 +149,8 @@ function loadInitialData() {
     loadRiskMetrics();
     loadSystemStatus();
     loadStrategiesList();
+    loadStrategiesStatus();
+    checkTradingStatus();
 }
 
 // 加载账户数据
@@ -396,7 +398,7 @@ function displayMarketChart(marketData, symbol) {
 // 启动现货交易
 async function startSpotTrading() {
     try {
-        const response = await fetch('/api/trading/start', {
+        const response = await fetch('/api/spot/trading/start', {
             method: 'POST'
         });
 
@@ -405,6 +407,11 @@ async function startSpotTrading() {
         if (data.success) {
             showSuccess(data.message);
             updateTradingStatus(true);
+            
+            // 更新策略数量显示
+            if (data.enabled_count !== undefined && data.total_count !== undefined) {
+                updateStrategyCountDisplay(data.enabled_count, data.total_count);
+            }
         } else {
             showError(data.message);
         }
@@ -416,7 +423,7 @@ async function startSpotTrading() {
 // 停止现货交易
 async function stopSpotTrading() {
     try {
-        const response = await fetch('/api/trading/stop', {
+        const response = await fetch('/api/spot/trading/stop', {
             method: 'POST'
         });
 
@@ -436,11 +443,16 @@ async function stopSpotTrading() {
 // 检查交易状态
 async function checkTradingStatus() {
     try {
-        const response = await fetch('/api/trading/status');
+        const response = await fetch('/api/spot/trading/status');
         const data = await response.json();
 
         if (data.success) {
-            updateTradingStatus(data.is_running);
+            updateTradingStatus(data.trading);
+            
+            // 更新策略数量显示
+            if (data.enabled_count !== undefined && data.total_count !== undefined) {
+                updateStrategyCountDisplay(data.enabled_count, data.total_count);
+            }
         }
     } catch (error) {
         console.error('检查交易状态失败:', error);
@@ -1275,6 +1287,10 @@ async function loadStrategiesStatus() {
             
             selectedSymbols = uniqueSymbols;
             enabledStrategies = data.enabled_strategies;
+            
+            // 更新策略数量显示
+            updateStrategyCountDisplay(data.enabled_count, data.total_count);
+            
             console.log('✅ 策略状态已加载:', {selectedSymbols, enabledStrategies});
         } else {
             console.error('❌ 加载策略状态失败:', data.message);
@@ -1693,8 +1709,30 @@ function updateStrategyStatistics(total, enabled, totalReturn, totalWinRate, val
         if (avgWinRateElement) avgWinRateElement.textContent = `${avgWinRate}%`;
     } else {
         if (avgReturnElement) avgReturnElement.textContent = '0%';
-        if (avgWinRateElement) avgWinRateElement.textContent = '0%';
+        if (avgWinRateElement) avgReturnElement.textContent = '0%';
     }
+}
+
+// 更新策略数量显示
+function updateStrategyCountDisplay(enabledCount, totalCount) {
+    // 更新现货交易控制面板中的策略数量显示
+    const spotStrategiesCountElement = document.getElementById('spot-strategies-count');
+    if (spotStrategiesCountElement) {
+        spotStrategiesCountElement.textContent = enabledCount;
+    }
+    
+    // 更新策略统计面板中的数量显示
+    const totalStrategiesCountElement = document.getElementById('total-strategies-count');
+    const enabledStrategiesCountElement = document.getElementById('enabled-strategies-count');
+    
+    if (totalStrategiesCountElement) {
+        totalStrategiesCountElement.textContent = totalCount;
+    }
+    if (enabledStrategiesCountElement) {
+        enabledStrategiesCountElement.textContent = enabledCount;
+    }
+    
+    console.log(`✅ 策略数量显示已更新: 启用 ${enabledCount}, 总计 ${totalCount}`);
 }
 
 async function viewDetailedBacktest(symbol, strategyType) {

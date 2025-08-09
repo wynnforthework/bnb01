@@ -303,28 +303,90 @@
                         <i class="fas fa-brain"></i>
                         <span class="ml-2">合约策略管理</span>
                     </p>
+                    <div class="card-header-icon">
+                        <div class="buttons has-addons">
+                            <button id="show-futures-symbols" class="button is-small is-outlined is-primary">币种管理</button>
+                            <button id="show-futures-strategies" class="button is-small is-outlined is-info">策略控制</button>
+                            <button id="show-futures-backtest" class="button is-small is-outlined is-success">回测分析</button>
+                        </div>
+                    </div>
                 </header>
+                
                 <div class="card-content">
-                    <div class="table-container">
-                        <table class="table is-fullwidth is-striped" id="futures-strategies-table">
-                            <thead>
-                                <tr>
-                                    <th>策略名称</th>
-                                    <th>交易对</th>
-                                    <th>类型</th>
-                                    <th>持仓</th>
-                                    <th>入场价</th>
-                                    <th>杠杆</th>
-                                    <th>状态</th>
-                                    <th>操作</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td colspan="8" class="has-text-centered">暂无合约策略数据</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <!-- 币种管理部分 -->
+                    <div id="futures-symbols-section" class="mb-4">
+                        <h6 class="title is-6 mb-3">选择交易币种</h6>
+                        <div class="field is-grouped is-grouped-multiline" id="futures-symbols-container">
+                            <!-- 币种选择框将在这里动态生成 -->
+                        </div>
+                        <div class="field mt-3">
+                            <button id="update-futures-symbols" class="button is-primary">
+                                <span class="icon">
+                                    <i class="fas fa-save"></i>
+                                </span>
+                                <span>保存币种选择</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 策略控制部分 -->
+                    <div id="futures-strategies-section" class="mb-4" style="display: none;">
+                        <h6 class="title is-6 mb-3">策略控制</h6>
+                        <div class="field">
+                            <label class="label">选择策略类型</label>
+                            <div class="control">
+                                <div class="select is-fullwidth">
+                                    <select id="futures-strategy-type">
+                                        <option value="MA">移动平均策略 (MA)</option>
+                                        <option value="RSI">相对强弱指数策略 (RSI)</option>
+                                        <option value="ML">机器学习策略 (ML)</option>
+                                        <option value="Chanlun">缠论策略 (Chanlun)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="field">
+                            <button id="update-futures-strategies" class="button is-info">
+                                <span class="icon">
+                                    <i class="fas fa-sync-alt"></i>
+                                </span>
+                                <span>更新策略</span>
+                            </button>
+                            <button id="compare-futures-strategies" class="button is-success ml-2">
+                                <span class="icon">
+                                    <i class="fas fa-chart-line"></i>
+                                </span>
+                                <span>策略对比</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 回测分析部分 -->
+                    <div id="futures-backtest-section" class="mb-4" style="display: none;">
+                        <h6 class="title is-6 mb-3">回测分析</h6>
+                        <div class="field">
+                            <button id="run-futures-backtest" class="button is-success">
+                                <span class="icon">
+                                    <i class="fas fa-play"></i>
+                                </span>
+                                <span>运行回测</span>
+                            </button>
+                        </div>
+                        
+                        <!-- 回测结果展示 -->
+                        <div id="futures-backtest-results" class="mt-4" style="display: none;">
+                            <h6 class="title is-6">回测结果</h6>
+                            <div id="futures-backtest-table"></div>
+                        </div>
+                    </div>
+
+                    <!-- 策略状态显示 -->
+                    <div class="mt-4">
+                        <h6 class="title is-6 mb-3">策略状态</h6>
+                        <div id="futures-strategies-status">
+                            <!-- 策略状态将在这里动态显示 -->
+                        </div>
                     </div>
                 </div>
             </div>
