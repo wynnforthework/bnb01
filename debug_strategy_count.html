@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>策略计数调试</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="title">策略计数调试</h1>
+        
+        <div class="columns">
+            <div class="column">
+                <div class="card">
+                    <div class="card-header">
+                        <p class="card-header-title">调试信息</p>
+                    </div>
+                    <div class="card-content">
+                        <div class="field">
+                            <label class="label">当前选中的币种数量</label>
+                            <div class="control">
+                                <input class="input" type="text" id="symbols-count" readonly>
+                            </div>
+                        </div>
+                        
+                        <div class="field">
+                            <label class="label">选中的币种列表</label>
+                            <div class="control">
+                                <textarea class="textarea" id="symbols-list" readonly rows="3"></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="field">
+                            <label class="label">预期策略总数</label>
+                            <div class="control">
+                                <input class="input" type="text" id="expected-strategies" readonly>
+                            </div>
+                        </div>
+                        
+                        <div class="field">
+                            <label class="label">实际策略总数</label>
+                            <div class="control">
+                                <input class="input" type="text" id="actual-strategies" readonly>
+                            </div>
+                        </div>
+                        
+                        <div class="field">
+                            <label class="label">策略计数计算过程</label>
+                            <div class="control">
+                                <textarea class="textarea" id="calculation-process" readonly rows="8"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="column">
+                <div class="card">
+                    <div class="card-header">
+                        <p class="card-header-title">操作</p>
+                    </div>
+                    <div class="card-content">
+                        <div class="field">
+                            <button class="button is-info is-fullwidth" onclick="debugStrategyCount()">
+                                <span class="icon">
+                                    <i class="fas fa-bug"></i>
+                                </span>
+                                <span>调试策略计数</span>
+                            </button>
+                        </div>
+                        
+                        <div class="field">
+                            <button class="button is-success is-fullwidth" onclick="simulateUpdateStrategies()">
+                                <span class="icon">
+                                    <i class="fas fa-sync"></i>
+                                </span>
+                                <span>模拟更新策略</span>
+                            </button>
+                        </div>
+                        
+                        <div class="field">
+                            <button class="button is-warning is-fullwidth" onclick="clearDebugInfo()">
+                                <span class="icon">
+                                    <i class="fas fa-eraser"></i>
+                                </span>
+                                <span>清除调试信息</span>
+                            </button>
+                        </div>
+                        
+                        <div class="field">
+                            <button class="button is-danger is-fullwidth" onclick="testLoadStrategiesStatus()">
+                                <span class="icon">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                </span>
+                                <span>测试loadStrategiesStatus</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="columns mt-4">
+            <div class="column">
+                <div class="card">
+                    <div class="card-header">
+                        <p class="card-header-title">全局变量状态</p>
+                    </div>
+                    <div class="card-content">
+                        <div class="field">
+                            <label class="label">selectedSymbols</label>
+                            <div class="control">
+                                <textarea class="textarea" id="global-selected-symbols" readonly rows="3"></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="field">
+                            <label class="label">enabledStrategies</label>
+                            <div class="control">
+                                <textarea class="textarea" id="global-enabled-strategies" readonly rows="3"></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="field">
+                            <label class="label">window.strategyBacktestData</label>
+                            <div class="control">
+                                <textarea class="textarea" id="global-strategy-backtest-data" readonly rows="3"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 模拟全局变量
+        let selectedSymbols = ['BTCUSDT', 'ETHUSDT', 'MATICUSDT'];
+        let enabledStrategies = {};
+        let backtestResults = {};
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化一些测试数据
+            selectedSymbols.forEach(symbol => {
+                ['MA', 'RSI', 'ML', 'Chanlun'].forEach(strategy => {
+                    const key = `${symbol}_${strategy}`;
+                    enabledStrategies[key] = Math.random() > 0.5; // 随机启用状态
+                    
+                    // 模拟回测数据
+                    backtestResults[key] = {
+                        total_return: (Math.random() - 0.5) * 0.2,
+                        total_trades: Math.floor(Math.random() * 100) + 10,
+                        win_rate: Math.random() * 0.8 + 0.2,
+                        max_drawdown: Math.random() * 0.3,
+                        sharpe_ratio: (Math.random() - 0.5) * 2
+                    };
+                });
+            });
+            
+            // 初始化 window.strategyBacktestData
+            if (!window.strategyBacktestData) {
+                window.strategyBacktestData = {};
+            }
+            
+            // 复制回测数据
+            Object.keys(backtestResults).forEach(key => {
+                window.strategyBacktestData[key] = { ...backtestResults[key] };
+            });
+            
+            updateDebugInfo();
+        });
+        
+        function debugStrategyCount() {
+            const container = document.createElement('div');
+            let totalStrategies = 0;
+            let enabledCount = 0;
+            let totalReturn = 0;
+            let totalWinRate = 0;
+            let validStrategies = 0;
+            
+            let calculationLog = '策略计数计算过程:\n';
+            calculationLog += `选中的币种: ${selectedSymbols.join(', ')}\n`;
+            calculationLog += `币种数量: ${selectedSymbols.length}\n\n`;
+            
+            selectedSymbols.forEach(symbol => {
+                calculationLog += `处理币种: ${symbol}\n`;
+                
+                ['MA', 'RSI', 'ML', 'Chanlun'].forEach((strategy, index) => {
+                    const key = `${symbol}_${strategy}`;
+                    const enabled = enabledStrategies[key] || false;
+                    
+                    // 优先使用全局回测数据，如果没有则尝试从用户状态恢复
+                    let backtestData = window.strategyBacktestData ? window.strategyBacktestData[key] : null;
+                    if (!backtestData && backtestResults && backtestResults[key]) {
+                        backtestData = backtestResults[key];
+                    }
+                    
+                    totalStrategies++;
+                    if (enabled) enabledCount++;
+                    
+                    calculationLog += `  ${strategy}: 总数+1 (${totalStrategies}), 启用: ${enabled ? '是' : '否'}\n`;
+                    
+                    // 计算统计数据
+                    if (backtestData) {
+                        totalReturn += backtestData.total_return || 0;
+                        totalWinRate += backtestData.win_rate || 0;
+                        validStrategies++;
+                        calculationLog += `    有回测数据: 收益率=${backtestData.total_return}, 胜率=${backtestData.win_rate}\n`;
+                    } else {
+                        calculationLog += `    无回测数据\n`;
+                    }
+                });
+                
+                calculationLog += '\n';
+            });
+            
+            calculationLog += `最终结果:\n`;
+            calculationLog += `总策略数: ${totalStrategies}\n`;
+            calculationLog += `启用策略数: ${enabledCount}\n`;
+            calculationLog += `有效策略数: ${validStrategies}\n`;
+            calculationLog += `总收益率: ${totalReturn}\n`;
+            calculationLog += `总胜率: ${totalWinRate}\n`;
+            
+            // 更新显示
+            document.getElementById('expected-strategies').value = selectedSymbols.length * 4;
+            document.getElementById('actual-strategies').value = totalStrategies;
+            document.getElementById('calculation-process').value = calculationLog;
+            
+            console.log('策略计数调试完成:', {
+                selectedSymbols,
+                totalStrategies,
+                enabledCount,
+                validStrategies,
+                totalReturn,
+                totalWinRate
+            });
+        }
+        
+        function simulateUpdateStrategies() {
+            // 模拟 updateStrategies 函数的行为
+            console.log('模拟更新策略...');
+            
+            // 清空并重新填充 window.strategyBacktestData
+            window.strategyBacktestData = {};
+            
+            selectedSymbols.forEach(symbol => {
+                ['MA', 'RSI', 'ML', 'Chanlun'].forEach(strategy => {
+                    const key = `${symbol}_${strategy}`;
+                    
+                    // 模拟从API获取的数据
+                    window.strategyBacktestData[key] = {
+                        total_return: (Math.random() - 0.5) * 0.2,
+                        total_trades: Math.floor(Math.random() * 100) + 10,
+                        win_rate: Math.random() * 0.8 + 0.2,
+                        max_drawdown: Math.random() * 0.3,
+                        sharpe_ratio: (Math.random() - 0.5) * 2,
+                        parameters: {}
+                    };
+                });
+            });
+            
+            console.log('模拟更新策略完成，strategyBacktestData:', window.strategyBacktestData);
+            updateDebugInfo();
+            debugStrategyCount();
+        }
+        
+        function testLoadStrategiesStatus() {
+            // 模拟 loadStrategiesStatus 函数的行为
+            console.log('测试 loadStrategiesStatus...');
+            
+            // 模拟API响应 - 这里故意添加重复的币种来测试
+            const mockApiResponse = {
+                success: true,
+                symbols: ['BTCUSDT', 'ETHUSDT', 'MATICUSDT', 'BTCUSDT', 'ETHUSDT'], // 故意重复
+                enabled_strategies: {}
+            };
+            
+            console.log('模拟API响应:', mockApiResponse);
+            
+            if (mockApiResponse.success) {
+                // 模拟原函数的行为
+                selectedSymbols = mockApiResponse.symbols;
+                enabledStrategies = mockApiResponse.enabled_strategies;
+                console.log('✅ 策略状态已加载:', {selectedSymbols, enabledStrategies});
+                
+                // 检查是否有重复
+                const uniqueSymbols = [...new Set(selectedSymbols)];
+                const duplicateCount = selectedSymbols.length - uniqueSymbols.length;
+                
+                console.log('原始币种数量:', selectedSymbols.length);
+                console.log('去重后币种数量:', uniqueSymbols.length);
+                console.log('重复币种数量:', duplicateCount);
+                console.log('重复的币种:', selectedSymbols.filter((symbol, index) => selectedSymbols.indexOf(symbol) !== index));
+                
+                if (duplicateCount > 0) {
+                    console.warn('⚠️ 发现重复币种！这会导致策略计数错误！');
+                    console.warn('预期策略数:', uniqueSymbols.length * 4);
+                    console.warn('实际策略数:', selectedSymbols.length * 4);
+                }
+            }
+            
+            updateDebugInfo();
+            debugStrategyCount();
+        }
+        
+        function clearDebugInfo() {
+            document.getElementById('symbols-count').value = '';
+            document.getElementById('symbols-list').value = '';
+            document.getElementById('expected-strategies').value = '';
+            document.getElementById('actual-strategies').value = '';
+            document.getElementById('calculation-process').value = '';
+        }
+        
+        function updateDebugInfo() {
+            document.getElementById('symbols-count').value = selectedSymbols.length;
+            document.getElementById('symbols-list').value = selectedSymbols.join(', ');
+            document.getElementById('global-selected-symbols').value = JSON.stringify(selectedSymbols, null, 2);
+            document.getElementById('global-enabled-strategies').value = JSON.stringify(enabledStrategies, null, 2);
+            document.getElementById('global-strategy-backtest-data').value = JSON.stringify(window.strategyBacktestData, null, 2);
+        }
+    </script>
+</body>
+</html>

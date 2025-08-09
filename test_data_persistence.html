@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据持久化测试</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="title">数据持久化测试页面</h1>
+        
+        <div class="notification is-info">
+            <p><strong>测试说明：</strong></p>
+            <ol>
+                <li>选择一些币种和策略</li>
+                <li>启用/禁用一些策略</li>
+                <li>运行一些回测</li>
+                <li>刷新页面，检查数据是否保持</li>
+            </ol>
+        </div>
+        
+        <div class="columns">
+            <div class="column is-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-header-title">币种选择</h3>
+                    </div>
+                    <div class="card-content">
+                        <div class="field">
+                            <label class="checkbox">
+                                <input type="checkbox" class="symbol-checkbox" value="BTCUSDT" checked>
+                                BTCUSDT
+                            </label>
+                        </div>
+                        <div class="field">
+                            <label class="checkbox">
+                                <input type="checkbox" class="symbol-checkbox" value="ETHUSDT" checked>
+                                ETHUSDT
+                            </label>
+                        </div>
+                        <div class="field">
+                            <label class="checkbox" class="symbol-checkbox" value="MATICUSDT">
+                                <input type="checkbox" value="MATICUSDT">
+                                MATICUSDT
+                            </label>
+                        </div>
+                        <button class="button is-primary" onclick="saveSymbolSelection()">保存币种选择</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="column is-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-header-title">策略控制</h3>
+                    </div>
+                    <div class="card-content">
+                        <div id="strategies-container">
+                            <!-- 策略将在这里动态生成 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h3 class="card-header-title">回测面板</h3>
+            </div>
+            <div class="card-content">
+                <div class="columns">
+                    <div class="column is-3">
+                        <div class="field">
+                            <label class="label">策略类型</label>
+                            <div class="control">
+                                <div class="select">
+                                    <select id="backtest-strategy">
+                                        <option value="MA">移动平均线策略</option>
+                                        <option value="RSI">RSI策略</option>
+                                        <option value="ML">机器学习策略</option>
+                                        <option value="Chanlun">缠论01策略</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="column is-3">
+                        <div class="field">
+                            <label class="label">币种</label>
+                            <div class="control">
+                                <div class="select">
+                                    <select id="backtest-symbol">
+                                        <option value="BTCUSDT">BTCUSDT</option>
+                                        <option value="ETHUSDT">ETHUSDT</option>
+                                        <option value="MATICUSDT">MATICUSDT</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="column is-3">
+                        <div class="field">
+                            <label class="label">开始日期</label>
+                            <div class="control">
+                                <input class="input" type="date" id="backtest-start" value="2024-01-01">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="column is-3">
+                        <div class="field">
+                            <label class="label">结束日期</label>
+                            <div class="control">
+                                <input class="input" type="date" id="backtest-end" value="2024-12-31">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button class="button is-success" onclick="runBacktest()">运行回测</button>
+                <div id="backtest-results" class="mt-4"></div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h3 class="card-header-title">调试信息</h3>
+            </div>
+            <div class="card-content">
+                <div class="columns">
+                    <div class="column is-6">
+                        <h5 class="title is-5">selectedSymbols</h5>
+                        <pre id="debug-symbols">[]</pre>
+                    </div>
+                    <div class="column is-6">
+                        <h5 class="title is-5">enabledStrategies</h5>
+                        <pre id="debug-strategies">{}</pre>
+                    </div>
+                </div>
+                <div class="columns">
+                    <div class="column is-6">
+                        <h5 class="title is-5">backtestResults</h5>
+                        <pre id="debug-backtest-results">{}</pre>
+                    </div>
+                    <div class="column is-6">
+                        <h5 class="title is-5">window.strategyBacktestData</h5>
+                        <pre id="debug-strategy-backtest-data">{}</pre>
+                    </div>
+                </div>
+                <button class="button is-info" onclick="updateDebugInfo()">更新调试信息</button>
+                <button class="button is-warning" onclick="clearAllData()">清除所有数据</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="static/js/app.js"></script>
+    <script>
+        // 模拟回测数据
+        function runBacktest() {
+            const strategyType = document.getElementById('backtest-strategy').value;
+            const symbol = document.getElementById('backtest-symbol').value;
+            
+            // 模拟回测结果
+            const mockResult = {
+                total_return: Math.random() * 0.2 - 0.1, // -10% 到 +10%
+                annual_return: Math.random() * 0.3 - 0.15, // -15% 到 +15%
+                max_drawdown: Math.random() * 0.2, // 0% 到 20%
+                sharpe_ratio: Math.random() * 2 - 1, // -1 到 +1
+                total_trades: Math.floor(Math.random() * 100) + 10,
+                win_rate: Math.random() * 0.4 + 0.3, // 30% 到 70%
+                avg_trade_return: Math.random() * 0.02 - 0.01, // -1% 到 +1%
+                profit_factor: Math.random() * 2 + 0.5, // 0.5 到 2.5
+                trades: [
+                    {
+                        timestamp: new Date().toISOString(),
+                        action: 'BUY',
+                        price: 50000 + Math.random() * 1000,
+                        quantity: 0.001,
+                        profit: Math.random() * 100 - 50
+                    }
+                ]
+            };
+            
+            // 调用显示函数
+            displayBacktestResults(mockResult, strategyType, symbol);
+            
+            // 更新调试信息
+            setTimeout(updateDebugInfo, 100);
+        }
+        
+        function updateDebugInfo() {
+            document.getElementById('debug-symbols').textContent = JSON.stringify(selectedSymbols || [], null, 2);
+            document.getElementById('debug-strategies').textContent = JSON.stringify(enabledStrategies || {}, null, 2);
+            document.getElementById('debug-backtest-results').textContent = JSON.stringify(backtestResults || {}, null, 2);
+            document.getElementById('debug-strategy-backtest-data').textContent = JSON.stringify(window.strategyBacktestData || {}, null, 2);
+        }
+        
+        function clearAllData() {
+            selectedSymbols = [];
+            enabledStrategies = {};
+            backtestResults = {};
+            window.strategyBacktestData = {};
+            updateStrategiesDisplay();
+            updateDebugInfo();
+            showSuccess('所有数据已清除');
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('页面加载完成，开始初始化...');
+            
+            // 等待app.js中的函数加载完成
+            setTimeout(async function() {
+                if (typeof initializeSymbolManagement === 'function') {
+                    await initializeSymbolManagement();
+                    updateDebugInfo();
+                    console.log('初始化完成');
+                } else {
+                    console.log('等待app.js加载...');
+                    setTimeout(arguments.callee, 100);
+                }
+            }, 100);
+        });
+    </script>
+</body>
+</html>

@@ -833,6 +833,19 @@ function displayBacktestResults(result, strategyType, symbol) {
         timestamp: new Date().toISOString()
     };
     
+    // 同时保存到strategyBacktestData中，用于策略显示
+    if (!window.strategyBacktestData) {
+        window.strategyBacktestData = {};
+    }
+    window.strategyBacktestData[resultKey] = {
+        total_return: result.total_return,
+        total_trades: result.total_trades,
+        win_rate: result.win_rate,
+        max_drawdown: result.max_drawdown,
+        sharpe_ratio: result.sharpe_ratio,
+        parameters: result.parameters || {}
+    };
+    
     // 保存用户状态
     saveUserState();
     
@@ -1043,9 +1056,9 @@ function displayStrategyComparison(results, symbol) {
 // ========== 新增的币种管理和策略控制功能 ==========
 
 // 全局变量
-let selectedSymbols = [];
-let enabledStrategies = {};
-let availableSymbols = [];
+let selectedSymbols = ['BTCUSDT', 'ETHUSDT']; // 默认选中的币种
+let enabledStrategies = {}; // 启用的策略状态
+let availableSymbols = []; // 当前可用的币种
 let allAvailableSymbols = []; // 存储所有可用币种
 let backtestResults = {}; // 存储回测结果
 
@@ -1058,7 +1071,8 @@ async function saveUserState() {
             body: JSON.stringify({
                 selected_symbols: selectedSymbols,
                 enabled_strategies: enabledStrategies,
-                backtest_results: backtestResults
+                backtest_results: backtestResults,
+                strategy_backtest_data: window.strategyBacktestData || {}
             })
         });
         
@@ -1075,6 +1089,7 @@ async function saveUserState() {
 
 async function loadUserState() {
     try {
+        // 首先尝试从服务器加载用户状态
         const response = await fetch('/api/user/state');
         const data = await response.json();
         
@@ -1084,59 +1099,96 @@ async function loadUserState() {
             // 恢复选中的币种
             if (state.selected_symbols && state.selected_symbols.length > 0) {
                 selectedSymbols = state.selected_symbols;
-                console.log('恢复选中的币种:', selectedSymbols);
+                console.log('从服务器恢复选中的币种:', selectedSymbols);
+            } else {
+                console.log('服务器没有币种数据，使用默认值:', selectedSymbols);
             }
             
             // 恢复启用的策略
-            if (state.enabled_strategies) {
+            if (state.enabled_strategies && Object.keys(state.enabled_strategies).length > 0) {
                 enabledStrategies = state.enabled_strategies;
-                console.log('恢复启用的策略:', enabledStrategies);
+                console.log('从服务器恢复启用的策略:', enabledStrategies);
+            } else {
+                console.log('服务器没有策略数据，使用默认值:', enabledStrategies);
             }
             
             // 恢复回测结果
-            if (state.backtest_results) {
+            if (state.backtest_results && Object.keys(state.backtest_results).length > 0) {
                 backtestResults = state.backtest_results;
-                console.log('恢复回测结果:', Object.keys(backtestResults));
-                console.log('回测结果详情:', backtestResults);
+                console.log('从服务器恢复回测结果:', Object.keys(backtestResults));
             } else {
-                console.log('没有回测结果需要恢复');
+                console.log('服务器没有回测结果，使用默认值:', backtestResults);
             }
             
-            // 更新显示
-            updateSymbolsDisplay();
-            updateStrategiesDisplay();
-            
-            // 恢复回测结果显示
-            if (backtestResults && Object.keys(backtestResults).length > 0) {
-                console.log('🔄 恢复回测结果显示...');
-                console.log('   回测结果数据:', backtestResults);
-                const resultsContainer = document.getElementById('backtest-results');
-                if (resultsContainer) {
-                    console.log('   找到回测结果容器');
-                    // 显示最新的回测结果
-                    const latestResult = Object.values(backtestResults).sort((a, b) => 
-                        new Date(b.timestamp) - new Date(a.timestamp)
-                    )[0];
-                    
-                    console.log('   最新回测结果:', latestResult);
-                    
-                    if (latestResult) {
-                        console.log('   调用displayBacktestResults...');
-                        displayBacktestResults(latestResult.result, latestResult.strategyType, latestResult.symbol);
-                    }
-                } else {
-                    console.log('   未找到回测结果容器');
-                }
+            // 恢复策略回测数据
+            if (state.strategy_backtest_data && Object.keys(state.strategy_backtest_data).length > 0) {
+                window.strategyBacktestData = state.strategy_backtest_data;
+                console.log('从服务器恢复策略回测数据:', Object.keys(window.strategyBacktestData));
             } else {
-                console.log('   没有回测结果需要恢复');
+                console.log('服务器没有策略回测数据，使用默认值');
+                window.strategyBacktestData = {};
             }
             
             console.log('用户状态恢复成功');
         } else {
-            console.error('加载用户状态失败:', data.message);
+            console.log('服务器加载用户状态失败，使用默认值');
         }
     } catch (error) {
-        console.error('加载用户状态失败:', error);
+        console.log('服务器连接失败，使用默认值:', error.message);
+    }
+    
+    // 无论服务器是否成功，都确保有默认值
+    if (!selectedSymbols || selectedSymbols.length === 0) {
+        selectedSymbols = ['BTCUSDT', 'ETHUSDT'];
+        console.log('设置默认币种:', selectedSymbols);
+    }
+    
+    if (!enabledStrategies || Object.keys(enabledStrategies).length === 0) {
+        // 设置一些默认启用的策略
+        enabledStrategies = {
+            'BTCUSDT_MA': true,
+            'BTCUSDT_RSI': false,
+            'BTCUSDT_ML': true,
+            'BTCUSDT_Chanlun': false,
+            'ETHUSDT_MA': false,
+            'ETHUSDT_RSI': false,
+            'ETHUSDT_ML': false,
+            'ETHUSDT_Chanlun': false
+        };
+        console.log('设置默认策略状态:', enabledStrategies);
+    }
+    
+    if (!backtestResults || Object.keys(backtestResults).length === 0) {
+        backtestResults = {};
+        console.log('设置默认回测结果:', backtestResults);
+    }
+    
+    // 确保strategyBacktestData被初始化
+    if (!window.strategyBacktestData) {
+        window.strategyBacktestData = {};
+        console.log('初始化strategyBacktestData');
+    }
+    
+    // 更新显示
+    updateSymbolsDisplay();
+    updateStrategiesDisplay();
+    
+    // 恢复回测结果显示
+    if (backtestResults && Object.keys(backtestResults).length > 0) {
+        console.log('🔄 恢复回测结果显示...');
+        const resultsContainer = document.getElementById('backtest-results');
+        if (resultsContainer) {
+            console.log('找到回测结果容器');
+            // 显示最新的回测结果
+            const latestResult = Object.values(backtestResults).sort((a, b) => 
+                new Date(b.timestamp) - new Date(a.timestamp)
+            )[0];
+            
+            if (latestResult) {
+                console.log('调用displayBacktestResults...');
+                displayBacktestResults(latestResult.result, latestResult.strategyType, latestResult.symbol);
+            }
+        }
     }
 }
 
@@ -1144,15 +1196,19 @@ async function loadUserState() {
 async function initializeSymbolManagement() {
     console.log('🔍 开始初始化币种管理...');
     try {
-        await loadAvailableSymbols();
-        console.log('✅ 加载可用币种完成');
-        await loadStrategiesStatus();
-        console.log('✅ 加载策略状态完成');
-        
-        // 加载用户状态
+        // 首先加载用户状态（从本地存储或服务器）
         await loadUserState();
         console.log('✅ 加载用户状态完成');
         
+        // 然后加载可用币种
+        await loadAvailableSymbols();
+        console.log('✅ 加载可用币种完成');
+        
+        // 加载策略状态
+        await loadStrategiesStatus();
+        console.log('✅ 加载策略状态完成');
+        
+        // 更新显示
         updateSymbolsDisplay();
         console.log('✅ 更新币种显示完成');
         updateStrategiesDisplay();
@@ -1209,7 +1265,15 @@ async function loadStrategiesStatus() {
         const data = await response.json();
         console.log('策略状态API响应数据:', data);
         if (data.success) {
-            selectedSymbols = data.symbols;
+            // 确保没有重复的币种
+            const uniqueSymbols = [...new Set(data.symbols)];
+            if (uniqueSymbols.length !== data.symbols.length) {
+                console.warn('⚠️ API返回的币种中有重复，已自动去重');
+                console.warn('原始币种:', data.symbols);
+                console.warn('去重后币种:', uniqueSymbols);
+            }
+            
+            selectedSymbols = uniqueSymbols;
             enabledStrategies = data.enabled_strategies;
             console.log('✅ 策略状态已加载:', {selectedSymbols, enabledStrategies});
         } else {
@@ -1418,16 +1482,16 @@ async function deleteCustomSymbol() {
     }
     
     // 获取当前选中的币种
-    const selectedSymbols = Array.from(document.querySelectorAll('.symbol-checkbox:checked'))
+    const selectedSymbolsToDelete = Array.from(document.querySelectorAll('.symbol-checkbox:checked'))
                                 .map(checkbox => checkbox.value);
     
-    if (selectedSymbols.length === 0) {
+    if (selectedSymbolsToDelete.length === 0) {
         showError('请先选择要删除的币种');
         return;
     }
     
     // 确认删除
-    const symbolList = selectedSymbols.join(', ');
+    const symbolList = selectedSymbolsToDelete.join(', ');
     const confirmed = confirm(`确定要删除以下币种吗？\n${symbolList}`);
     
     if (confirmed) {
@@ -1446,7 +1510,7 @@ async function deleteCustomSymbol() {
             `;
             
             // 从当前显示的币种列表中移除
-            selectedSymbols.forEach(symbol => {
+            selectedSymbolsToDelete.forEach(symbol => {
                 const index = availableSymbols.indexOf(symbol);
                 if (index > -1) {
                     availableSymbols.splice(index, 1);
@@ -1507,7 +1571,11 @@ function updateStrategiesDisplay() {
         ['MA', 'RSI', 'ML', 'Chanlun'].forEach((strategy, index) => {
             const key = `${symbol}_${strategy}`;
             const enabled = enabledStrategies[key] || false;
-            const backtestData = window.strategyBacktestData ? window.strategyBacktestData[key] : null;
+            // 优先使用全局回测数据，如果没有则尝试从用户状态恢复
+            let backtestData = window.strategyBacktestData ? window.strategyBacktestData[key] : null;
+            if (!backtestData && window.backtestResults && window.backtestResults[key]) {
+                backtestData = window.backtestResults[key];
+            }
             
             totalStrategies++;
             if (enabled) enabledCount++;
@@ -1802,10 +1870,18 @@ async function updateStrategies() {
         
         showSuccess('正在更新策略，请稍候...');
         
+        // 确保没有重复的币种
+        const uniqueSymbols = [...new Set(selectedSymbols)];
+        if (uniqueSymbols.length !== selectedSymbols.length) {
+            console.warn('⚠️ 选中的币种中有重复，已自动去重');
+            console.warn('原始币种:', selectedSymbols);
+            console.warn('去重后币种:', uniqueSymbols);
+        }
+        
         const response = await fetch('/api/spot/strategies/update', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({symbols: selectedSymbols})
+            body: JSON.stringify({symbols: uniqueSymbols})
         });
         
         const data = await response.json();
@@ -1828,6 +1904,9 @@ async function updateStrategies() {
                     };
                 });
             });
+            
+            // 保存用户状态，包括新的回测数据
+            await saveUserState();
             
             updateStrategiesDisplay();
             showSuccess(data.message);
@@ -1872,6 +1951,8 @@ async function enableAllStrategies() {
                     enabledStrategies[`${symbol}_${strategy}`] = true;
                 });
             });
+            // 保存用户状态
+            await saveUserState();
             updateStrategiesDisplay();
             showSuccess(data.message);
         } else {
@@ -1915,6 +1996,8 @@ async function disableAllStrategies() {
                     enabledStrategies[`${symbol}_${strategy}`] = false;
                 });
             });
+            // 保存用户状态
+            await saveUserState();
             updateStrategiesDisplay();
             showSuccess(data.message);
         } else {
