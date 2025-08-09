@@ -14,22 +14,6 @@ document.addEventListener('DOMContentLoaded', function () {
 setTimeout(async () => {
     console.log('🔄 开始初始化币种管理...');
     await initializeSymbolManagement();
-    
-    // 恢复回测结果显示
-    if (backtestResults && Object.keys(backtestResults).length > 0) {
-        console.log('🔄 恢复回测结果显示...');
-        const resultsContainer = document.getElementById('backtest-results');
-        if (resultsContainer) {
-            // 显示最新的回测结果
-            const latestResult = Object.values(backtestResults).sort((a, b) => 
-                new Date(b.timestamp) - new Date(a.timestamp)
-            )[0];
-            
-            if (latestResult) {
-                displayBacktestResults(latestResult.result, latestResult.strategyType, latestResult.symbol);
-            }
-        }
-    }
 }, 500);
 });
 
@@ -1113,11 +1097,39 @@ async function loadUserState() {
             if (state.backtest_results) {
                 backtestResults = state.backtest_results;
                 console.log('恢复回测结果:', Object.keys(backtestResults));
+                console.log('回测结果详情:', backtestResults);
+            } else {
+                console.log('没有回测结果需要恢复');
             }
             
             // 更新显示
             updateSymbolsDisplay();
             updateStrategiesDisplay();
+            
+            // 恢复回测结果显示
+            if (backtestResults && Object.keys(backtestResults).length > 0) {
+                console.log('🔄 恢复回测结果显示...');
+                console.log('   回测结果数据:', backtestResults);
+                const resultsContainer = document.getElementById('backtest-results');
+                if (resultsContainer) {
+                    console.log('   找到回测结果容器');
+                    // 显示最新的回测结果
+                    const latestResult = Object.values(backtestResults).sort((a, b) => 
+                        new Date(b.timestamp) - new Date(a.timestamp)
+                    )[0];
+                    
+                    console.log('   最新回测结果:', latestResult);
+                    
+                    if (latestResult) {
+                        console.log('   调用displayBacktestResults...');
+                        displayBacktestResults(latestResult.result, latestResult.strategyType, latestResult.symbol);
+                    }
+                } else {
+                    console.log('   未找到回测结果容器');
+                }
+            } else {
+                console.log('   没有回测结果需要恢复');
+            }
             
             console.log('用户状态恢复成功');
         } else {
@@ -1485,12 +1497,14 @@ function updateStrategiesDisplay() {
     
     selectedSymbols.forEach(symbol => {
         html += `
-            <div class="mb-4">
-                <h6 class="border-bottom pb-2 text-primary">${symbol}</h6>
-                <div class="row">
+            <div class="mb-5">
+                <h4 class="title is-4 has-text-primary pb-2 mb-4" style="border-bottom: 2px solid #3273dc;">
+                    <i class="fas fa-coins mr-2"></i>${symbol}
+                </h4>
         `;
         
-        ['MA', 'RSI', 'ML', 'Chanlun'].forEach(strategy => {
+        // 策略垂直排版
+        ['MA', 'RSI', 'ML', 'Chanlun'].forEach((strategy, index) => {
             const key = `${symbol}_${strategy}`;
             const enabled = enabledStrategies[key] || false;
             const backtestData = window.strategyBacktestData ? window.strategyBacktestData[key] : null;
@@ -1510,53 +1524,73 @@ function updateStrategiesDisplay() {
             const tradeCount = backtestData ? backtestData.total_trades : 0;
             const sharpeRatio = backtestData ? backtestData.sharpe_ratio.toFixed(2) : '0.00';
             
-            const returnColor = returnPercent >= 0 ? 'text-success' : 'text-danger';
-            const winRateColor = winRatePercent >= 50 ? 'text-success' : 'text-warning';
+            const returnColor = returnPercent >= 0 ? 'has-text-success' : 'has-text-danger';
+            const winRateColor = winRatePercent >= 50 ? 'has-text-success' : 'has-text-warning';
             
             html += `
-                <div class="col-md-6 col-lg-3 mb-3">
-                    <div class="card ${enabled ? 'border-success' : 'border-secondary'} strategy-card h-100" 
-                         onclick="toggleStrategy('${key}')" style="cursor: pointer;">
-                        <div class="card-header p-2 d-flex justify-content-between align-items-center">
-                            <span class="fw-bold">${strategy}</span>
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" 
-                                       ${enabled ? 'checked' : ''} 
-                                       onchange="toggleStrategy('${key}', event)">
+                <div class="mb-4">
+                    <div class="card ${enabled ? 'has-background-success-light' : 'has-background-light'} strategy-card">
+                        <div class="card-header p-3" style="background-color: ${enabled ? '#f0f9ff' : '#f5f5f5'};">
+                            <div class="level is-mobile mb-0">
+                                <div class="level-left">
+                                    <div class="level-item">
+                                        <h6 class="title is-6 mb-0">
+                                            <i class="fas fa-chart-line mr-2"></i>${strategy} 策略
+                                        </h6>
+                                    </div>
+                                </div>
+                                <div class="level-right">
+                                    <div class="level-item">
+                                        <label class="switch">
+                                            <input type="checkbox" ${enabled ? 'checked' : ''} 
+                                                   onchange="toggleStrategy('${key}', event)">
+                                            <span class="slider round"></span>
+                                        </label>
+                                        <small class="ml-2 has-text-grey">${enabled ? '启用' : '禁用'}</small>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div class="card-body p-2">
+                        <div class="card-content p-4">
                             ${backtestData ? `
-                                <div class="row text-center">
-                                    <div class="col-6">
-                                        <small class="text-muted">收益率</small><br>
-                                        <span class="${returnColor} fw-bold">${returnPercent}%</span>
+                                <!-- 回测结果水平排版 -->
+                                <div class="columns is-multiline">
+                                    <div class="column is-3">
+                                        <div class="has-text-centered p-3" style="background-color: #f8f9fa; border-radius: 8px;">
+                                            <div class="has-text-grey is-size-7">收益率</div>
+                                            <div class="has-text-weight-bold is-size-4 ${returnColor}">${returnPercent}%</div>
+                                        </div>
                                     </div>
-                                    <div class="col-6">
-                                        <small class="text-muted">胜率</small><br>
-                                        <span class="${winRateColor} fw-bold">${winRatePercent}%</span>
+                                    <div class="column is-3">
+                                        <div class="has-text-centered p-3" style="background-color: #f8f9fa; border-radius: 8px;">
+                                            <div class="has-text-grey is-size-7">胜率</div>
+                                            <div class="has-text-weight-bold is-size-4 ${winRateColor}">${winRatePercent}%</div>
+                                        </div>
+                                    </div>
+                                    <div class="column is-3">
+                                        <div class="has-text-centered p-3" style="background-color: #f8f9fa; border-radius: 8px;">
+                                            <div class="has-text-grey is-size-7">交易次数</div>
+                                            <div class="has-text-weight-bold is-size-4">${tradeCount}</div>
+                                        </div>
+                                    </div>
+                                    <div class="column is-3">
+                                        <div class="has-text-centered p-3" style="background-color: #f8f9fa; border-radius: 8px;">
+                                            <div class="has-text-grey is-size-7">夏普比率</div>
+                                            <div class="has-text-weight-bold is-size-4">${sharpeRatio}</div>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="row text-center mt-2">
-                                    <div class="col-6">
-                                        <small class="text-muted">交易次数</small><br>
-                                        <span class="fw-bold">${tradeCount}</span>
-                                    </div>
-                                    <div class="col-6">
-                                        <small class="text-muted">夏普比率</small><br>
-                                        <span class="fw-bold">${sharpeRatio}</span>
-                                    </div>
-                                </div>
-                                <div class="mt-2">
-                                    <button class="btn btn-sm btn-outline-info w-100" 
-                                            onclick="viewDetailedBacktest('${symbol}', '${strategy}')">
-                                        <i class="fas fa-chart-line"></i> 详细回测
+                                <div class="mt-4 has-text-centered">
+                                    <button class="button is-info is-outlined" 
+                                            onclick="event.stopPropagation(); viewDetailedBacktest('${symbol}', '${strategy}')">
+                                        <i class="fas fa-chart-line mr-2"></i>查看详细回测
                                     </button>
                                 </div>
                             ` : `
-                                <div class="text-center text-muted">
-                                    <i class="fas fa-clock"></i><br>
-                                    <small>等待回测</small>
+                                <div class="has-text-centered has-text-grey p-4">
+                                    <i class="fas fa-clock is-size-1 mb-3"></i>
+                                    <div class="is-size-5">等待回测</div>
+                                    <small>该策略尚未进行回测分析</small>
                                 </div>
                             `}
                         </div>
@@ -1565,10 +1599,7 @@ function updateStrategiesDisplay() {
             `;
         });
         
-        html += `
-                </div>
-            </div>
-        `;
+        html += `</div>`;
     });
     
     container.innerHTML = html;
@@ -1615,43 +1646,42 @@ async function viewDetailedBacktest(symbol, strategyType) {
 
 function showDetailedBacktestModal(backtestData) {
     const modalHtml = `
-        <div class="modal fade" id="backtestModal" tabindex="-1">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">${backtestData.symbol} - ${backtestData.strategy} 详细回测结果</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <h6>收益指标</h6>
-                                <table class="table table-sm">
-                                    <tr><td>总收益率:</td><td class="${backtestData.total_return >= 0 ? 'text-success' : 'text-danger'}">${(backtestData.total_return * 100).toFixed(2)}%</td></tr>
-                                    <tr><td>夏普比率:</td><td>${backtestData.sharpe_ratio.toFixed(2)}</td></tr>
-                                    <tr><td>最大回撤:</td><td class="text-danger">${(backtestData.max_drawdown * 100).toFixed(2)}%</td></tr>
-                                </table>
-                            </div>
-                            <div class="col-md-6">
-                                <h6>交易统计</h6>
-                                <table class="table table-sm">
-                                    <tr><td>总交易次数:</td><td>${backtestData.total_trades}</td></tr>
-                                    <tr><td>胜率:</td><td class="${backtestData.win_rate >= 0.5 ? 'text-success' : 'text-warning'}">${(backtestData.win_rate * 100).toFixed(1)}%</td></tr>
-                                    <tr><td>策略状态:</td><td><span class="badge bg-success">已启用</span></td></tr>
-                                </table>
-                            </div>
+        <div class="modal" id="backtestModal">
+            <div class="modal-background"></div>
+            <div class="modal-card">
+                <header class="modal-card-head">
+                    <p class="modal-card-title">${backtestData.symbol} - ${backtestData.strategy} 详细回测结果</p>
+                    <button class="delete" aria-label="close" onclick="closeBacktestModal()"></button>
+                </header>
+                <section class="modal-card-body">
+                    <div class="columns">
+                        <div class="column">
+                            <h6 class="title is-6">收益指标</h6>
+                            <table class="table is-fullwidth is-striped">
+                                <tr><td>总收益率:</td><td class="${backtestData.total_return >= 0 ? 'has-text-success' : 'has-text-danger'}">${(backtestData.total_return * 100).toFixed(2)}%</td></tr>
+                                <tr><td>夏普比率:</td><td>${backtestData.sharpe_ratio.toFixed(2)}</td></tr>
+                                <tr><td>最大回撤:</td><td class="has-text-danger">${(backtestData.max_drawdown * 100).toFixed(2)}%</td></tr>
+                            </table>
                         </div>
-                        ${backtestData.parameters ? `
-                            <div class="mt-3">
-                                <h6>策略参数</h6>
-                                <pre class="bg-light p-2 rounded">${JSON.stringify(backtestData.parameters, null, 2)}</pre>
-                            </div>
-                        ` : ''}
+                        <div class="column">
+                            <h6 class="title is-6">交易统计</h6>
+                            <table class="table is-fullwidth is-striped">
+                                <tr><td>总交易次数:</td><td>${backtestData.total_trades}</td></tr>
+                                <tr><td>胜率:</td><td class="${backtestData.win_rate >= 0.5 ? 'has-text-success' : 'has-text-warning'}">${(backtestData.win_rate * 100).toFixed(1)}%</td></tr>
+                                <tr><td>策略状态:</td><td><span class="tag is-success">已启用</span></td></tr>
+                            </table>
+                        </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
-                    </div>
-                </div>
+                    ${backtestData.parameters ? `
+                        <div class="mt-4">
+                            <h6 class="title is-6">策略参数</h6>
+                            <pre class="has-background-light p-2" style="border-radius: 4px;">${JSON.stringify(backtestData.parameters, null, 2)}</pre>
+                        </div>
+                    ` : ''}
+                </section>
+                <footer class="modal-card-foot">
+                    <button class="button" onclick="closeBacktestModal()">关闭</button>
+                </footer>
             </div>
         </div>
     `;
@@ -1666,8 +1696,28 @@ function showDetailedBacktestModal(backtestData) {
     document.body.insertAdjacentHTML('beforeend', modalHtml);
     
     // 显示模态框
-    const modal = new bootstrap.Modal(document.getElementById('backtestModal'));
-    modal.show();
+    const modal = document.getElementById('backtestModal');
+    modal.classList.add('is-active');
+    
+    // 添加背景点击关闭事件
+    const modalBackground = modal.querySelector('.modal-background');
+    if (modalBackground) {
+        modalBackground.onclick = closeBacktestModal;
+    }
+}
+
+// 关闭详细回测模态框
+function closeBacktestModal() {
+    const modal = document.getElementById('backtestModal');
+    if (modal) {
+        modal.classList.remove('is-active');
+        // 延迟删除模态框元素
+        setTimeout(() => {
+            if (modal.parentNode) {
+                modal.parentNode.removeChild(modal);
+            }
+        }, 150);
+    }
 }
 
 // 全选币种

@@ -628,3 +628,91 @@ body {
 .table-container::-webkit-scrollbar-thumb:hover {
     background: #a8a8a8;
 }
+
+/* 自定义开关样式 */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 24px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 24px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #3273dc;
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+/* 策略卡片样式增强 */
+.strategy-card {
+    transition: all 0.3s ease;
+    border: 1px solid #dbdbdb;
+}
+
+.strategy-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(10, 10, 10, 0.15);
+}
+
+.strategy-card .card-header {
+    border-bottom: 1px solid #dbdbdb;
+}
+
+/* 回测指标样式 */
+.backtest-metric-box {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+    border: 1px solid #e9ecef;
+    transition: all 0.2s ease;
+}
+
+.backtest-metric-box:hover {
+    background-color: #e9ecef;
+    transform: scale(1.02);
+}
+
+/* 币种标题样式 */
+.symbol-title {
+    border-bottom: 2px solid #3273dc;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.symbol-title i {
+    margin-right: 0.5rem;
+    color: #3273dc;
+}
