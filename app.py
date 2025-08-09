@@ -636,22 +636,62 @@ def run_strategy_backtest(symbol, strategy_type):
         available_data = dc.get_market_data(symbol, '1h', limit=1000)
         
         if available_data.empty:
-            # 如果没有数据，使用最近7天作为默认范围
+            # 如果没有数据，先尝试收集数据
+            print(f"⚠️ {symbol} 没有历史数据，尝试收集...")
+            try:
+                import asyncio
+                # 创建新的事件循环来运行异步函数
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    # 收集最近30天的数据
+                    collected_data = loop.run_until_complete(
+                        dc.collect_historical_data(symbol, '1h', days=30)
+                    )
+                    if not collected_data.empty:
+                        print(f"✅ {symbol} 数据收集成功，获得 {len(collected_data)} 条记录")
+                        available_data = dc.get_market_data(symbol, '1h', limit=1000)
+                    else:
+                        print(f"❌ {symbol} 数据收集失败")
+                finally:
+                    loop.close()
+            except Exception as e:
+                print(f"❌ {symbol} 数据收集过程中出错: {e}")
+        
+        if available_data.empty:
+            # 如果仍然没有数据，使用最近7天作为默认范围
             start_date = end_date - timedelta(days=7)
+            print(f"⚠️ {symbol} 使用默认日期范围: {start_date} 到 {end_date}")
         else:
             # 使用数据库中实际可用的数据范围
             start_date = available_data['timestamp'].min()
             end_date = available_data['timestamp'].max()
-            print(f"使用实际数据范围: {start_date} 到 {end_date}")
+            print(f"✅ {symbol} 使用实际数据范围: {start_date} 到 {end_date}")
         
         # 根据策略类型创建策略实例
         if strategy_type == 'MA':
-            strategy = MovingAverageStrategy(symbol)
+            from strategies.ma_strategy import MovingAverageStrategy
+            strategy = MovingAverageStrategy(symbol, {
+                'short_window': 10,
+                'long_window': 20,
+                'stop_loss': 0.02,
+                'take_profit': 0.05,
+                'position_size': 0.1
+            })
             parameters = {'short_window': 10, 'long_window': 20}
         elif strategy_type == 'RSI':
-            strategy = RSIStrategy(symbol)
+            from strategies.rsi_strategy import RSIStrategy
+            strategy = RSIStrategy(symbol, {
+                'rsi_period': 14,
+                'oversold': 30,
+                'overbought': 70,
+                'stop_loss': 0.02,
+                'take_profit': 0.05,
+                'position_size': 0.1
+            })
             parameters = {'period': 14, 'overbought': 70, 'oversold': 30}
         elif strategy_type == 'ML':
+            from strategies.ml_strategy import MLStrategy
             strategy = MLStrategy(symbol, {
                 'model_type': 'random_forest',
                 'lookback_period': 30,
@@ -665,8 +705,24 @@ def run_strategy_backtest(symbol, strategy_type):
             })
             parameters = {'model_type': 'random_forest'}
         elif strategy_type == 'Chanlun':
-            # 缠论策略使用默认参数
-            strategy = None  # 需要实现缠论策略
+            from strategies.chanlun_strategy import ChanlunStrategy
+            strategy = ChanlunStrategy(symbol, {
+                'timeframes': ['30m', '1h', '4h'],
+                'min_swing_length': 2,
+                'central_bank_min_bars': 2,
+                'macd_fast': 12,
+                'macd_slow': 26,
+                'macd_signal': 9,
+                'rsi_period': 14,
+                'ma_short': 5,
+                'ma_long': 20,
+                'position_size': 0.2,
+                'max_position': 0.8,
+                'stop_loss': 0.04,
+                'take_profit': 0.08,
+                'trend_confirmation': 0.01,
+                'divergence_threshold': 0.05
+            })
             parameters = {}
         else:
             raise ValueError(f"不支持的策略类型: {strategy_type}")
@@ -705,7 +761,7 @@ def run_strategy_backtest(symbol, strategy_type):
         }
         
     except Exception as e:
-        print(f"回测执行失败: {e}")
+        print(f"回测执行失败 {symbol} {strategy_type}: {e}")
         return {
             'symbol': symbol,
             'strategy': strategy_type,
