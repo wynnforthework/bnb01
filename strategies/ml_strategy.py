@@ -620,9 +620,9 @@ class MLStrategy(BaseStrategy):
                 return pd.DataFrame()
             
             # 检查数据类型
-            self.logger.info(f"原始数据形状: {data.shape}")
-            self.logger.info(f"原始数据类型: {data.dtypes}")
-            self.logger.info(f"原始数据列: {list(data.columns)}")
+            # self.logger.info(f"原始数据形状: {data.shape}")
+            # self.logger.info(f"原始数据类型: {data.dtypes}")
+            # self.logger.info(f"原始数据列: {list(data.columns)}")
             
             # 处理可能的字符串数据
             df = data.copy()

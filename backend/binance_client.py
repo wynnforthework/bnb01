@@ -225,14 +225,7 @@ class BinanceClient:
     def _is_valid_symbol(self, symbol: str) -> bool:
         """检查交易对是否有效"""
         try:
-            # 使用正确的API方法名称
-            if hasattr(self.client, 'get_exchange_info'):
-                exchange_info = self.client.get_exchange_info()
-            elif hasattr(self.client, 'get_exchange_information'):
-                exchange_info = self.client.get_exchange_information()
-            else:
-                # 如果都不存在，尝试直接获取
-                exchange_info = self.client.get_exchange_info()
+            exchange_info = self.get_exchange_info()
             
             if exchange_info:
                 for s in exchange_info['symbols']:
@@ -342,17 +335,25 @@ class BinanceClient:
             self.logger.error(f"下单异常: {e}")
             return None
     
-    def _get_symbol_info(self, symbol):
-        """获取交易对信息"""
+    def get_exchange_info(self):
+        """获取交易所信息"""
         try:
             # 使用正确的API方法名称
             if hasattr(self.client, 'get_exchange_info'):
-                exchange_info = self.client.get_exchange_info()
+                return self.client.get_exchange_info()
             elif hasattr(self.client, 'get_exchange_information'):
-                exchange_info = self.client.get_exchange_information()
+                return self.client.get_exchange_information()
             else:
                 # 如果都不存在，尝试直接获取
-                exchange_info = self.client.get_exchange_info()
+                return self.client.get_exchange_info()
+        except Exception as e:
+            self.logger.error(f"获取交易所信息失败: {e}")
+            return None
+
+    def _get_symbol_info(self, symbol):
+        """获取交易对信息"""
+        try:
+            exchange_info = self.get_exchange_info()
             
             if exchange_info:
                 for s in exchange_info['symbols']:

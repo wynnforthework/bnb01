@@ -36,70 +36,114 @@ function initializeFuturesSocket() {
 
 // 绑定合约交易事件
 function bindFuturesEvents() {
-    // 启动合约交易
-    document.getElementById('start-futures-trading').addEventListener('click', function() {
-        startFuturesTrading();
-    });
+    console.log('🔧 开始绑定合约交易事件...');
     
-    // 停止合约交易
-    document.getElementById('stop-futures-trading').addEventListener('click', function() {
-        stopFuturesTrading();
-    });
-    
-    // 更新配置
-    document.getElementById('update-futures-config').addEventListener('click', function() {
-        updateFuturesConfig();
-    });
-    
-    // 刷新数据
-    document.getElementById('refresh-futures-data').addEventListener('click', function() {
-        loadFuturesInitialData();
-    });
-    
-    // 手动下单
-    document.getElementById('confirm-futures-order').addEventListener('click', function() {
-        submitFuturesOrder();
-    });
-    
-    // 查看持仓
-    document.getElementById('refresh-futures-positions').addEventListener('click', function() {
-        loadFuturesPositions();
-    });
-    
-    // 杠杆变化
-    document.getElementById('futures-leverage').addEventListener('change', function() {
-        currentLeverage = parseInt(this.value);
-        updateFuturesLeverageStatus();
-    });
-    
-    // 币种选择变化
-    document.getElementById('futures-symbols').addEventListener('change', function() {
-        updateSelectedSymbols();
-    });
-    
-
-    
-    // 订单类型变化
-    document.getElementById('futures-order-type').addEventListener('change', function() {
-        toggleFuturesPriceInput(this.value);
-    });
-    
-    // 订单参数变化时更新预览
-    document.getElementById('futures-order-quantity').addEventListener('input', updateFuturesOrderPreview);
-    document.getElementById('futures-order-price').addEventListener('input', updateFuturesOrderPreview);
-    document.getElementById('futures-order-symbol').addEventListener('change', function() {
-        updateFuturesMarketInfo(this.value);
-    });
-    
-
+    try {
+        // 启动合约交易
+        const startButton = document.getElementById('start-futures-trading');
+        if (startButton) {
+            startButton.addEventListener('click', function() {
+                console.log('🚀 启动合约交易按钮被点击');
+                startFuturesTrading();
+            });
+            console.log('✅ 启动合约交易按钮事件绑定成功');
+        } else {
+            console.error('❌ 未找到启动合约交易按钮');
+        }
+        
+        // 停止合约交易
+        const stopButton = document.getElementById('stop-futures-trading');
+        if (stopButton) {
+            stopButton.addEventListener('click', function() {
+                console.log('🛑 停止合约交易按钮被点击');
+                stopFuturesTrading();
+            });
+            console.log('✅ 停止合约交易按钮事件绑定成功');
+        } else {
+            console.error('❌ 未找到停止合约交易按钮');
+        }
+        
+        // 更新配置
+        const updateButton = document.getElementById('update-futures-config');
+        if (updateButton) {
+            updateButton.addEventListener('click', function() {
+                console.log('⚙️ 更新配置按钮被点击');
+                updateFuturesConfig();
+            });
+            console.log('✅ 更新配置按钮事件绑定成功');
+        } else {
+            console.error('❌ 未找到更新配置按钮');
+        }
+        
+        // 刷新数据
+        const refreshButton = document.getElementById('refresh-futures-data');
+        if (refreshButton) {
+            refreshButton.addEventListener('click', function() {
+                console.log('🔄 刷新数据按钮被点击');
+                loadFuturesInitialData();
+            });
+            console.log('✅ 刷新数据按钮事件绑定成功');
+        } else {
+            console.error('❌ 未找到刷新数据按钮');
+        }
+        
+        // 手动下单
+        const manualOrderButton = document.getElementById('manual-futures-order');
+        if (manualOrderButton) {
+            manualOrderButton.addEventListener('click', function() {
+                console.log('📝 手动下单按钮被点击');
+                openModal('futuresOrderModal');
+            });
+            console.log('✅ 手动下单按钮事件绑定成功');
+        } else {
+            console.error('❌ 未找到手动下单按钮');
+        }
+        
+        // 查看持仓
+        const viewPositionsButton = document.getElementById('view-futures-positions');
+        if (viewPositionsButton) {
+            viewPositionsButton.addEventListener('click', function() {
+                console.log('📊 查看持仓按钮被点击');
+                openModal('futuresPositionsModal');
+            });
+            console.log('✅ 查看持仓按钮事件绑定成功');
+        } else {
+            console.error('❌ 未找到查看持仓按钮');
+        }
+        
+        // 杠杆变化
+        const leverageSelect = document.getElementById('futures-leverage');
+        if (leverageSelect) {
+            leverageSelect.addEventListener('change', function() {
+                currentLeverage = parseInt(this.value);
+                updateFuturesLeverageStatus();
+            });
+            console.log('✅ 杠杆选择事件绑定成功');
+        } else {
+            console.error('❌ 未找到杠杆选择元素');
+        }
+        
+        console.log('✅ 合约交易事件绑定完成');
+        
+    } catch (error) {
+        console.error('❌ 绑定合约交易事件时出错:', error);
+    }
 }
 
 // 加载合约交易初始数据
 function loadFuturesInitialData() {
-    loadFuturesAccountData();
-    loadFuturesPositions();
-    loadFuturesTradesData();
-    loadSpotConfigForFutures(); // 加载现货配置用于合约交易
+    console.log('🔄 开始加载合约交易初始数据...');
+    
+    try {
+        loadFuturesAccountData();
+        loadFuturesPositions();
+        loadFuturesTradesData();
+        loadSpotConfigForFutures(); // 加载现货配置用于合约交易
+        
+        console.log('✅ 合约交易初始数据加载完成');
+    } catch (error) {
+        console.error('❌ 加载合约交易初始数据失败:', error);
+    }
 }
 
 // 加载合约账户数据
@@ -829,58 +873,80 @@ async function loadSpotConfigForFutures() {
 
 // 更新合约交易控制面板显示
 function updateFuturesControlPanel(symbols, enabledStrategies) {
+    console.log('🔄 更新合约交易控制面板显示...');
+    console.log('币种列表:', symbols);
+    console.log('启用策略:', enabledStrategies);
+    
     // 更新币种显示
     const enabledSymbolsDisplay = document.getElementById('futures-enabled-symbols-display');
     if (enabledSymbolsDisplay) {
+        console.log('✅ 找到币种显示容器');
         enabledSymbolsDisplay.innerHTML = '';
         
-        // 显示前5个币种，其余的用数字表示
-        const displaySymbols = symbols.slice(0, 5);
-        const remainingCount = symbols.length - 5;
-        
-        displaySymbols.forEach(symbol => {
-            const tag = document.createElement('span');
-            tag.className = 'tag is-info';
-            tag.textContent = symbol.replace('USDT', '/USDT');
-            enabledSymbolsDisplay.appendChild(tag);
-        });
-        
-        if (remainingCount > 0) {
-            const moreTag = document.createElement('span');
-            moreTag.className = 'tag is-light';
-            moreTag.textContent = `+${remainingCount}`;
-            enabledSymbolsDisplay.appendChild(moreTag);
+        if (symbols && symbols.length > 0) {
+            // 显示前5个币种，其余的用数字表示
+            const displaySymbols = symbols.slice(0, 5);
+            const remainingCount = symbols.length - 5;
+            
+            displaySymbols.forEach(symbol => {
+                const tag = document.createElement('span');
+                tag.className = 'tag is-info';
+                tag.textContent = symbol.replace('USDT', '/USDT');
+                enabledSymbolsDisplay.appendChild(tag);
+                console.log('添加币种标签:', symbol);
+            });
+            
+            if (remainingCount > 0) {
+                const moreTag = document.createElement('span');
+                moreTag.className = 'tag is-light';
+                moreTag.textContent = `+${remainingCount}`;
+                enabledSymbolsDisplay.appendChild(moreTag);
+                console.log('添加更多币种标签:', `+${remainingCount}`);
+            }
+        } else {
+            // 如果没有币种，显示提示
+            const noSymbolsTag = document.createElement('span');
+            noSymbolsTag.className = 'tag is-warning';
+            noSymbolsTag.textContent = '未选择币种';
+            enabledSymbolsDisplay.appendChild(noSymbolsTag);
+            console.log('显示未选择币种提示');
         }
+    } else {
+        console.error('❌ 未找到币种显示容器: futures-enabled-symbols-display');
     }
     
     // 更新币种状态显示
     const symbolsStatus = document.getElementById('futures-symbols-status');
     if (symbolsStatus) {
-        const displayText = symbols.length > 3 ? 
-            `${symbols.slice(0, 3).map(s => s.replace('USDT', '')).join(', ')}...` :
-            symbols.map(s => s.replace('USDT', '')).join(', ');
-        symbolsStatus.textContent = displayText;
+        if (symbols && symbols.length > 0) {
+            const displayText = symbols.length > 3 ? 
+                `${symbols.slice(0, 3).map(s => s.replace('USDT', '')).join(', ')}...` :
+                symbols.map(s => s.replace('USDT', '')).join(', ');
+            symbolsStatus.textContent = displayText;
+            console.log('更新币种状态显示:', displayText);
+        } else {
+            symbolsStatus.textContent = '未选择币种';
+            console.log('更新币种状态显示: 未选择币种');
+        }
+    } else {
+        console.error('❌ 未找到币种状态显示元素: futures-symbols-status');
     }
     
     // 更新策略状态显示（如果有的话）
     const modeStatus = document.getElementById('futures-mode-status');
-    if (modeStatus && enabledStrategies.length > 0) {
+    if (modeStatus && enabledStrategies && enabledStrategies.length > 0) {
         const strategyText = enabledStrategies.join(', ');
         modeStatus.textContent = `合约模式 (${strategyText})`;
+        console.log('更新策略状态显示:', `合约模式 (${strategyText})`);
+    } else if (modeStatus) {
+        modeStatus.textContent = '合约模式';
+        console.log('更新策略状态显示: 合约模式');
+    } else {
+        console.error('❌ 未找到模式状态显示元素: futures-mode-status');
     }
-}
-
-// 在页面加载时调用配置加载
-document.addEventListener('DOMContentLoaded', function() {
-    // 延迟加载配置，确保DOM元素已经准备好
-    setTimeout(loadSavedConfig, 1000); // 增加延迟到1秒
     
-    // 如果第一次加载失败，再尝试一次
-    setTimeout(function() {
-        console.log('执行第二次配置加载尝试...');
-        loadSavedConfig();
-    }, 2000);
-});
+    console.log('✅ 合约交易控制面板显示更新完成');
+}
 
 // ==================== 合约策略管理功能 ====================
 
