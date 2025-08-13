@@ -66,43 +66,39 @@ def view_database_results():
     print("\n🗄️  查看数据库中的优化结果...")
     
     try:
-        conn = sqlite3.connect('optimization_results.db')
-        
-        # 查看优化结果表
-        print("  📊 优化结果表:")
-        df_results = pd.read_sql_query("""
-            SELECT strategy_type, symbol, total_return, sharpe_ratio, 
-                   win_rate, max_drawdown, total_trades, timestamp
-            FROM optimization_results 
-            ORDER BY total_return DESC
-            LIMIT 10
-        """, conn)
+        # 使用统一的数据源
+        df_results = get_unified_results()
         
         if not df_results.empty:
-            print(df_results.to_string(index=False))
+            print("  📊 优化结果表:")
+            # 显示前10个最佳结果
+            top_results = df_results.head(10)[['strategy_type', 'symbol', 'total_return', 'sharpe_ratio', 
+                                             'win_rate', 'max_drawdown', 'total_trades', 'timestamp']]
+            print(top_results.to_string(index=False))
         else:
             print("    ⚠️  暂无优化结果")
         
         # 查看最佳结果表
         print("\n  🏆 最佳结果表:")
-        df_best = pd.read_sql_query("""
-            SELECT strategy_type, symbol, total_return, sharpe_ratio, 
-                   win_rate, max_drawdown, timestamp
-            FROM best_results 
-            ORDER BY total_return DESC
-        """, conn)
+        try:
+            conn = sqlite3.connect('optimization_results.db')
+            df_best = pd.read_sql_query("""
+                SELECT strategy_type, symbol, total_return, sharpe_ratio, 
+                       win_rate, max_drawdown, timestamp
+                FROM best_results 
+                ORDER BY total_return DESC
+            """, conn)
+            conn.close()
+            
+            if not df_best.empty:
+                print(df_best.to_string(index=False))
+            else:
+                print("    ⚠️  暂无最佳结果")
+        except:
+            print("    ⚠️  无法读取最佳结果表")
         
-        if not df_best.empty:
-            print(df_best.to_string(index=False))
-        else:
-            print("    ⚠️  暂无最佳结果")
-        
-        conn.close()
-        
-    except FileNotFoundError:
-        print("  ❌ 未找到 optimization_results.db 文件")
     except Exception as e:
-        print(f"  ❌ 读取数据库结果失败: {e}")
+        print(f"  ❌ 读取结果失败: {e}")
 
 def export_best_parameters():
     """导出最佳参数配置"""
@@ -181,3 +177,58 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+def get_unified_results():
+    """获取统一的优化结果（优先使用数据库）"""
+    print("🔍 获取统一的优化结果...")
+    
+    # 优先从数据库读取
+    try:
+        conn = sqlite3.connect('optimization_results.db')
+        df = pd.read_sql_query("""
+            SELECT test_id, strategy_type, symbol, params, total_return, 
+                   sharpe_ratio, win_rate, max_drawdown, profit_factor,
+                   total_trades, avg_trade_duration, timestamp
+            FROM optimization_results 
+            ORDER BY total_return DESC
+        """, conn)
+        conn.close()
+        
+        if not df.empty:
+            print(f"  ✅ 从数据库读取了 {len(df)} 条记录")
+            return df
+    except Exception as e:
+        print(f"  ⚠️  数据库读取失败: {e}")
+    
+    # 如果数据库读取失败，从JSON读取
+    try:
+        with open('optimization_results.json', 'r', encoding='utf-8') as f:
+            results = json.load(f)
+        
+        if results:
+            # 转换为DataFrame格式
+            df_data = []
+            for result in results:
+                df_data.append({
+                    'test_id': result['test_id'],
+                    'strategy_type': result['strategy_type'],
+                    'symbol': result['symbol'],
+                    'params': json.dumps(result['params']),
+                    'total_return': result['metrics'].get('total_return', 0),
+                    'sharpe_ratio': result['metrics'].get('sharpe_ratio', 0),
+                    'win_rate': result['metrics'].get('win_rate', 0),
+                    'max_drawdown': result['metrics'].get('max_drawdown', 0),
+                    'profit_factor': result['metrics'].get('profit_factor', 0),
+                    'total_trades': result['metrics'].get('total_trades', 0),
+                    'avg_trade_duration': result['metrics'].get('avg_trade_duration', 0),
+                    'timestamp': result['timestamp']
+                })
+            
+            df = pd.DataFrame(df_data)
+            print(f"  ✅ 从JSON读取了 {len(df)} 条记录")
+            return df
+    except Exception as e:
+        print(f"  ❌ JSON读取失败: {e}")
+    
+    return pd.DataFrame()
+

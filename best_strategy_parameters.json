@@ -1,22 +1,4 @@
 {
-  "MA_ETHUSDT": {
-    "strategy_type": "MA",
-    "symbol": "ETHUSDT",
-    "parameters": {
-      "short_window": 8,
-      "long_window": 34,
-      "position_size": 2.0,
-      "stop_loss": 0.01,
-      "take_profit": 0.08
-    },
-    "performance": {
-      "total_return": 0.0,
-      "sharpe_ratio": 0.0,
-      "win_rate": 0.0,
-      "max_drawdown": 0.0
-    },
-    "timestamp": "2025-08-13T12:21:32.775024"
-  },
   "RSI_ETHUSDT": {
     "strategy_type": "RSI",
     "symbol": "ETHUSDT",
@@ -35,6 +17,98 @@
       "max_drawdown": 0.0
     },
     "timestamp": "2025-08-13T12:21:37.827203"
+  },
+  "ML_ADAUSDT": {
+    "strategy_type": "ML",
+    "symbol": "ADAUSDT",
+    "parameters": {
+      "lookback_period": 27,
+      "prediction_horizon": 1,
+      "model_type": "gradient_boosting",
+      "position_size": 1.0,
+      "stop_loss": 0.03,
+      "take_profit": 0.02
+    },
+    "performance": {
+      "total_return": 15326.38769414576,
+      "sharpe_ratio": 0.16771381251893255,
+      "win_rate": 99.0,
+      "max_drawdown": -102.09692780337937
+    },
+    "timestamp": "2025-08-13T12:42:08.107106"
+  },
+  "Chanlun_ADAUSDT": {
+    "strategy_type": "Chanlun",
+    "symbol": "ADAUSDT",
+    "parameters": {
+      "min_swing_length": 4,
+      "trend_confirmation": 0.05,
+      "position_size": 2.0,
+      "stop_loss": 0.01,
+      "take_profit": 0.1
+    },
+    "performance": {
+      "total_return": 17585.90197006614,
+      "sharpe_ratio": 10.623039071597763,
+      "win_rate": 94.05405405405406,
+      "max_drawdown": -60.82226940480333
+    },
+    "timestamp": "2025-08-13T12:57:39.679637"
+  },
+  "RSI_ADAUSDT": {
+    "strategy_type": "RSI",
+    "symbol": "ADAUSDT",
+    "parameters": {
+      "rsi_period": 10,
+      "overbought": 78,
+      "oversold": 20,
+      "position_size": 0.5,
+      "stop_loss": 0.05,
+      "take_profit": 0.02
+    },
+    "performance": {
+      "total_return": 6389.667690288713,
+      "sharpe_ratio": 13.809891403375756,
+      "win_rate": 98.7012987012987,
+      "max_drawdown": -50.46994750656169
+    },
+    "timestamp": "2025-08-13T12:37:48.398700"
+  },
+  "MA_ADAUSDT": {
+    "strategy_type": "MA",
+    "symbol": "ADAUSDT",
+    "parameters": {
+      "short_window": 7,
+      "long_window": 86,
+      "position_size": 0.1,
+      "stop_loss": 0.01,
+      "take_profit": 0.02
+    },
+    "performance": {
+      "total_return": 101.45731424676214,
+      "sharpe_ratio": 54.77763451243373,
+      "win_rate": 77.77777777777779,
+      "max_drawdown": -10.180415814587596
+    },
+    "timestamp": "2025-08-13T12:37:41.850791"
+  },
+  "MA_ETHUSDT": {
+    "strategy_type": "MA",
+    "symbol": "ETHUSDT",
+    "parameters": {
+      "short_window": 8,
+      "long_window": 34,
+      "position_size": 2.0,
+      "stop_loss": 0.01,
+      "take_profit": 0.08
+    },
+    "performance": {
+      "total_return": 0.0,
+      "sharpe_ratio": 0.0,
+      "win_rate": 0.0,
+      "max_drawdown": 0.0
+    },
+    "timestamp": "2025-08-13T12:21:32.775024"
   },
   "ML_ETHUSDT": {
     "strategy_type": "ML",

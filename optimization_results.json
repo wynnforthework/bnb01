@@ -1,25 +1,2780 @@
 [
   {
-    "test_id": "MA_ETHUSDT_1755059637",
-    "strategy_type": "MA",
-    "symbol": "ETHUSDT",
+    "test_id": "ML_ADAUSDT_1755072393",
+    "strategy_type": "ML",
+    "symbol": "ADAUSDT",
     "params": {
-      "short_window": 8,
-      "long_window": 50,
+      "lookback_period": 49,
+      "prediction_horizon": 1,
+      "model_type": "random_forest",
+      "position_size": 0.5,
+      "stop_loss": 0.01,
+      "take_profit": 0.03
+    },
+    "metrics": {
+      "total_return": 2644.7029064797402,
+      "sharpe_ratio": 14.018221138150288,
+      "max_drawdown": -50.49452043084287,
+      "win_rate": 97.2972972972973,
+      "profit_factor": 999.99,
+      "total_trades": 37,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T16:07:16.112319",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "RSI_ADAUSDT_1755072386",
+    "strategy_type": "RSI",
+    "symbol": "ADAUSDT",
+    "params": {
+      "rsi_period": 7,
+      "overbought": 76,
+      "oversold": 22,
+      "position_size": 0.1,
+      "stop_loss": 0.03,
+      "take_profit": 0.02
+    },
+    "metrics": {
+      "total_return": 2279.8602996650798,
+      "sharpe_ratio": 52.64903716879807,
+      "max_drawdown": -10.020576414595453,
+      "win_rate": 99.27007299270073,
+      "profit_factor": 999.99,
+      "total_trades": 137,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T16:06:28.015877",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "MA_ADAUSDT_1755072380",
+    "strategy_type": "MA",
+    "symbol": "ADAUSDT",
+    "params": {
+      "short_window": 18,
+      "long_window": 70,
+      "position_size": 5.0,
+      "stop_loss": 0.01,
+      "take_profit": 0.08
+    },
+    "metrics": {
+      "total_return": 5190.86391699537,
+      "sharpe_ratio": 3.1137159288235945,
+      "max_drawdown": -508.13162407820255,
+      "win_rate": 77.77777777777779,
+      "profit_factor": 282.8444374999998,
+      "total_trades": 9,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T16:06:21.527892",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "Chanlun_ADAUSDT_1755071997",
+    "strategy_type": "Chanlun",
+    "symbol": "ADAUSDT",
+    "params": {
+      "min_swing_length": 5,
+      "trend_confirmation": 0.01,
+      "position_size": 5.0,
+      "stop_loss": 0.05,
+      "take_profit": 0.08
+    },
+    "metrics": {
+      "total_return": 43964.75492516533,
+      "sharpe_ratio": 5.379764732698006,
+      "max_drawdown": -152.05567351200833,
+      "win_rate": 94.05405405405406,
+      "profit_factor": 1199.7620181818145,
+      "total_trades": 185,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T16:06:15.505772",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "ML_ADAUSDT_1755071949",
+    "strategy_type": "ML",
+    "symbol": "ADAUSDT",
+    "params": {
+      "lookback_period": 21,
+      "prediction_horizon": 1,
+      "model_type": "random_forest",
+      "position_size": 0.1,
+      "stop_loss": 0.05,
+      "take_profit": 0.08
+    },
+    "metrics": {
+      "total_return": 250.99626979792453,
+      "sharpe_ratio": 59.29771226703125,
+      "max_drawdown": -10.233921354451123,
+      "win_rate": 86.95652173913044,
+      "profit_factor": 169.2518484848477,
+      "total_trades": 23,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T15:59:52.415112",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "RSI_ADAUSDT_1755071942",
+    "strategy_type": "RSI",
+    "symbol": "ADAUSDT",
+    "params": {
+      "rsi_period": 13,
+      "overbought": 66,
+      "oversold": 22,
+      "position_size": 0.1,
+      "stop_loss": 0.05,
+      "take_profit": 0.02
+    },
+    "metrics": {
+      "total_return": 3376.1755063401083,
+      "sharpe_ratio": 54.87774302261712,
+      "max_drawdown": -10.166331422615949,
+      "win_rate": 99.52153110047847,
+      "profit_factor": 999.99,
+      "total_trades": 209,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T15:59:04.160279",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "MA_ADAUSDT_1755071936",
+    "strategy_type": "MA",
+    "symbol": "ADAUSDT",
+    "params": {
+      "short_window": 17,
+      "long_window": 56,
+      "position_size": 0.5,
+      "stop_loss": 0.05,
+      "take_profit": 0.02
+    },
+    "metrics": {
+      "total_return": 780.9963981607629,
+      "sharpe_ratio": 13.66854722783991,
+      "max_drawdown": -51.04625340599455,
+      "win_rate": 83.33333333333334,
+      "profit_factor": 225.61965384615362,
+      "total_trades": 12,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T15:58:57.676698",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "Chanlun_ADAUSDT_1755071615",
+    "strategy_type": "Chanlun",
+    "symbol": "ADAUSDT",
+    "params": {
+      "min_swing_length": 7,
+      "trend_confirmation": 0.05,
+      "position_size": 1.0,
+      "stop_loss": 0.05,
+      "take_profit": 0.02
+    },
+    "metrics": {
+      "total_return": 23416.611839540554,
+      "sharpe_ratio": 25.751845620719127,
+      "max_drawdown": -30.41113470240167,
+      "win_rate": 96.49484536082474,
+      "profit_factor": 2230.1039871794856,
+      "total_trades": 485,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T15:58:51.610889",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "ML_ADAUSDT_1755071467",
+    "strategy_type": "ML",
+    "symbol": "ADAUSDT",
+    "params": {
+      "lookback_period": 24,
+      "prediction_horizon": 1,
+      "model_type": "gradient_boosting",
+      "position_size": 2.0,
+      "stop_loss": 0.02,
+      "take_profit": 0.08
+    },
+    "metrics": {
+      "total_return": 30634.146714456398,
+      "sharpe_ratio": 5.486926890613659,
+      "max_drawdown": -204.19385560675875,
+      "win_rate": 99.0,
+      "profit_factor": 999.99,
+      "total_trades": 100,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T15:53:30.343038",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "RSI_ADAUSDT_1755071460",
+    "strategy_type": "RSI",
+    "symbol": "ADAUSDT",
+    "params": {
+      "rsi_period": 7,
+      "overbought": 77,
+      "oversold": 22,
+      "position_size": 5.0,
+      "stop_loss": 0.05,
+      "take_profit": 0.1
+    },
+    "metrics": {
+      "total_return": 108693.09509959453,
+      "sharpe_ratio": 3.098968432597988,
+      "max_drawdown": -501.0288207297726,
+      "win_rate": 99.23664122137404,
+      "profit_factor": 999.99,
+      "total_trades": 131,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T15:51:02.042589",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "MA_ADAUSDT_1755071454",
+    "strategy_type": "MA",
+    "symbol": "ADAUSDT",
+    "params": {
+      "short_window": 18,
+      "long_window": 68,
+      "position_size": 0.5,
+      "stop_loss": 0.02,
+      "take_profit": 0.08
+    },
+    "metrics": {
+      "total_return": 616.2065426997247,
+      "sharpe_ratio": 13.645936028949768,
+      "max_drawdown": -50.61818181818181,
+      "win_rate": 80.0,
+      "profit_factor": 443.97464912280407,
+      "total_trades": 10,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T15:50:55.496958",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "Chanlun_ADAUSDT_1755071071",
+    "strategy_type": "Chanlun",
+    "symbol": "ADAUSDT",
+    "params": {
+      "min_swing_length": 4,
+      "trend_confirmation": 0.05,
+      "position_size": 2.0,
+      "stop_loss": 0.01,
+      "take_profit": 0.1
+    },
+    "metrics": {
+      "total_return": 17585.90197006614,
+      "sharpe_ratio": 10.623039071597763,
+      "max_drawdown": -60.82226940480333,
+      "win_rate": 94.05405405405406,
+      "profit_factor": 1199.762018181815,
+      "total_trades": 185,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T15:50:49.486408",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "ML_ADAUSDT_1755071031",
+    "strategy_type": "ML",
+    "symbol": "ADAUSDT",
+    "params": {
+      "lookback_period": 10,
+      "prediction_horizon": 1,
+      "model_type": "logistic_regression",
+      "position_size": 5.0,
+      "stop_loss": 0.03,
+      "take_profit": 0.02
+    },
+    "metrics": {
+      "total_return": 173213.251874574,
+      "sharpe_ratio": 2.8113569539133114,
+      "max_drawdown": -505.61247443762767,
+      "win_rate": 93.24894514767934,
+      "profit_factor": 457.35597184986796,
+      "total_trades": 237,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T15:44:26.916578",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "RSI_ADAUSDT_1755071024",
+    "strategy_type": "RSI",
+    "symbol": "ADAUSDT",
+    "params": {
+      "rsi_period": 15,
+      "overbought": 70,
+      "oversold": 24,
+      "position_size": 2.0,
+      "stop_loss": 0.05,
+      "take_profit": 0.1
+    },
+    "metrics": {
+      "total_return": 40649.899808928254,
+      "sharpe_ratio": 5.480840943530568,
+      "max_drawdown": -203.32662845231891,
+      "win_rate": 99.21259842519686,
+      "profit_factor": 999.99,
+      "total_trades": 127,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T15:43:46.480634",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "MA_ADAUSDT_1755071018",
+    "strategy_type": "MA",
+    "symbol": "ADAUSDT",
+    "params": {
+      "short_window": 20,
+      "long_window": 80,
+      "position_size": 1.0,
+      "stop_loss": 0.03,
+      "take_profit": 0.1
+    },
+    "metrics": {
+      "total_return": 839.487476667232,
+      "sharpe_ratio": 0.41238697791951456,
+      "max_drawdown": -102.66236212455453,
+      "win_rate": 75.0,
+      "profit_factor": 178.84283783783783,
+      "total_trades": 8,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T15:43:39.942637",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "Chanlun_ADAUSDT_1755070636",
+    "strategy_type": "Chanlun",
+    "symbol": "ADAUSDT",
+    "params": {
+      "min_swing_length": 5,
+      "trend_confirmation": 0.02,
+      "position_size": 5.0,
+      "stop_loss": 0.03,
+      "take_profit": 0.02
+    },
+    "metrics": {
+      "total_return": 43964.75492516533,
+      "sharpe_ratio": 5.379764732698006,
+      "max_drawdown": -152.05567351200833,
+      "win_rate": 94.05405405405406,
+      "profit_factor": 1199.7620181818145,
+      "total_trades": 185,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T15:43:33.943425",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "ML_ADAUSDT_1755070588",
+    "strategy_type": "ML",
+    "symbol": "ADAUSDT",
+    "params": {
+      "lookback_period": 27,
+      "prediction_horizon": 3,
+      "model_type": "random_forest",
+      "position_size": 1.0,
+      "stop_loss": 0.05,
+      "take_profit": 0.03
+    },
+    "metrics": {
+      "total_return": 5634.525141515946,
+      "sharpe_ratio": 0.44875887164592493,
+      "max_drawdown": -104.36618804362831,
+      "win_rate": 96.0,
+      "profit_factor": 263.6558231707303,
+      "total_trades": 50,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T15:37:11.570034",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "RSI_ADAUSDT_1755070581",
+    "strategy_type": "RSI",
+    "symbol": "ADAUSDT",
+    "params": {
+      "rsi_period": 9,
+      "overbought": 76,
+      "oversold": 35,
+      "position_size": 1.0,
+      "stop_loss": 0.02,
+      "take_profit": 0.1
+    },
+    "metrics": {
+      "total_return": 18173.90142857143,
+      "sharpe_ratio": 0.0390482474903487,
+      "max_drawdown": -102.56127366609293,
+      "win_rate": 99.10714285714286,
+      "profit_factor": 999.99,
+      "total_trades": 112,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T15:36:23.217332",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "MA_ADAUSDT_1755070575",
+    "strategy_type": "MA",
+    "symbol": "ADAUSDT",
+    "params": {
+      "short_window": 18,
+      "long_window": 32,
+      "position_size": 5.0,
+      "stop_loss": 0.01,
+      "take_profit": 0.08
+    },
+    "metrics": {
+      "total_return": 11098.943817297675,
+      "sharpe_ratio": 2.6395413778045085,
+      "max_drawdown": -504.3207711010767,
+      "win_rate": 87.5,
+      "profit_factor": 932.1937179487143,
+      "total_trades": 16,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T15:36:16.673623",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "Chanlun_ADAUSDT_1755070253",
+    "strategy_type": "Chanlun",
+    "symbol": "ADAUSDT",
+    "params": {
+      "min_swing_length": 7,
+      "trend_confirmation": 0.02,
+      "position_size": 0.1,
+      "stop_loss": 0.03,
+      "take_profit": 0.05
+    },
+    "metrics": {
+      "total_return": 2341.661183954057,
+      "sharpe_ratio": 122.81972054643614,
+      "max_drawdown": -3.0411134702401617,
+      "win_rate": 96.49484536082474,
+      "profit_factor": 2230.103987179485,
+      "total_trades": 485,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T15:36:10.675989",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "ML_ADAUSDT_1755070213",
+    "strategy_type": "ML",
+    "symbol": "ADAUSDT",
+    "params": {
+      "lookback_period": 26,
+      "prediction_horizon": 5,
+      "model_type": "logistic_regression",
+      "position_size": 5.0,
+      "stop_loss": 0.05,
+      "take_profit": 0.02
+    },
+    "metrics": {
+      "total_return": 197110.7110978112,
+      "sharpe_ratio": 2.8654911231985314,
+      "max_drawdown": -503.9199726402188,
+      "win_rate": 96.03174603174604,
+      "profit_factor": 791.0336751361192,
+      "total_trades": 252,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T15:30:48.952459",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "RSI_ADAUSDT_1755070207",
+    "strategy_type": "RSI",
+    "symbol": "ADAUSDT",
+    "params": {
+      "rsi_period": 18,
+      "overbought": 69,
+      "oversold": 33,
+      "position_size": 0.1,
+      "stop_loss": 0.01,
+      "take_profit": 0.02
+    },
+    "metrics": {
+      "total_return": 1969.3127010595795,
+      "sharpe_ratio": 53.33162674379577,
+      "max_drawdown": -10.166331422615949,
+      "win_rate": 99.2,
+      "profit_factor": 999.99,
+      "total_trades": 125,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T15:30:08.685520",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "MA_ADAUSDT_1755070201",
+    "strategy_type": "MA",
+    "symbol": "ADAUSDT",
+    "params": {
+      "short_window": 19,
+      "long_window": 89,
+      "position_size": 5.0,
+      "stop_loss": 0.01,
+      "take_profit": 0.08
+    },
+    "metrics": {
+      "total_return": 4274.145409471705,
+      "sharpe_ratio": 3.092280805453818,
+      "max_drawdown": -509.64686271157456,
+      "win_rate": 75.0,
+      "profit_factor": 284.61345070422556,
+      "total_trades": 8,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T15:30:02.015534",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "Chanlun_ADAUSDT_1755069818",
+    "strategy_type": "Chanlun",
+    "symbol": "ADAUSDT",
+    "params": {
+      "min_swing_length": 5,
+      "trend_confirmation": 0.02,
+      "position_size": 1.0,
+      "stop_loss": 0.03,
+      "take_profit": 0.03
+    },
+    "metrics": {
+      "total_return": 8792.95098503307,
+      "sharpe_ratio": 25.12018767936672,
+      "max_drawdown": -30.41113470240167,
+      "win_rate": 94.05405405405406,
+      "profit_factor": 1199.762018181815,
+      "total_trades": 185,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T15:29:56.004081",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "ML_ADAUSDT_1755069778",
+    "strategy_type": "ML",
+    "symbol": "ADAUSDT",
+    "params": {
+      "lookback_period": 16,
+      "prediction_horizon": 5,
+      "model_type": "logistic_regression",
+      "position_size": 5.0,
+      "stop_loss": 0.05,
+      "take_profit": 0.08
+    },
+    "metrics": {
+      "total_return": 197879.74110807112,
+      "sharpe_ratio": 2.86549252053011,
+      "max_drawdown": -503.9199726402188,
+      "win_rate": 96.04743083003953,
+      "profit_factor": 793.8957441016365,
+      "total_trades": 253,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T15:23:33.419679",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "RSI_ADAUSDT_1755069771",
+    "strategy_type": "RSI",
+    "symbol": "ADAUSDT",
+    "params": {
+      "rsi_period": 8,
+      "overbought": 76,
+      "oversold": 34,
+      "position_size": 1.0,
+      "stop_loss": 0.02,
+      "take_profit": 0.05
+    },
+    "metrics": {
+      "total_return": 20261.122633390707,
+      "sharpe_ratio": 0.03904823876464703,
+      "max_drawdown": -102.56127366609293,
+      "win_rate": 99.2,
+      "profit_factor": 999.99,
+      "total_trades": 125,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T15:22:53.240779",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "MA_ADAUSDT_1755069765",
+    "strategy_type": "MA",
+    "symbol": "ADAUSDT",
+    "params": {
+      "short_window": 15,
+      "long_window": 100,
+      "position_size": 5.0,
+      "stop_loss": 0.03,
+      "take_profit": 0.05
+    },
+    "metrics": {
+      "total_return": 4276.238229755179,
+      "sharpe_ratio": 3.0948890743072095,
+      "max_drawdown": -507.8617531244649,
+      "win_rate": 75.0,
+      "profit_factor": 204.41974747474939,
+      "total_trades": 8,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T15:22:46.695696",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "Chanlun_ADAUSDT_1755069383",
+    "strategy_type": "Chanlun",
+    "symbol": "ADAUSDT",
+    "params": {
+      "min_swing_length": 4,
+      "trend_confirmation": 0.01,
+      "position_size": 5.0,
+      "stop_loss": 0.01,
+      "take_profit": 0.08
+    },
+    "metrics": {
+      "total_return": 43964.75492516533,
+      "sharpe_ratio": 5.379764732698006,
+      "max_drawdown": -152.05567351200833,
+      "win_rate": 94.05405405405406,
+      "profit_factor": 1199.7620181818145,
+      "total_trades": 185,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T15:22:40.679368",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "ML_ADAUSDT_1755069235",
+    "strategy_type": "ML",
+    "symbol": "ADAUSDT",
+    "params": {
+      "lookback_period": 39,
+      "prediction_horizon": 1,
+      "model_type": "gradient_boosting",
+      "position_size": 5.0,
+      "stop_loss": 0.01,
+      "take_profit": 0.03
+    },
+    "metrics": {
+      "total_return": 75583.64319849806,
+      "sharpe_ratio": 2.781661192384212,
+      "max_drawdown": -510.48463901689695,
+      "win_rate": 98.98989898989899,
+      "profit_factor": 999.99,
+      "total_trades": 99,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T15:16:18.611203",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "RSI_ADAUSDT_1755069229",
+    "strategy_type": "RSI",
+    "symbol": "ADAUSDT",
+    "params": {
+      "rsi_period": 12,
+      "overbought": 78,
+      "oversold": 32,
+      "position_size": 1.0,
+      "stop_loss": 0.02,
+      "take_profit": 0.1
+    },
+    "metrics": {
+      "total_return": 8279.411807228915,
+      "sharpe_ratio": 0.37523932223312906,
+      "max_drawdown": -102.56127366609293,
+      "win_rate": 98.14814814814815,
+      "profit_factor": 999.99,
+      "total_trades": 54,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T15:13:50.791983",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "MA_ADAUSDT_1755069223",
+    "strategy_type": "MA",
+    "symbol": "ADAUSDT",
+    "params": {
+      "short_window": 12,
+      "long_window": 56,
+      "position_size": 2.0,
+      "stop_loss": 0.01,
+      "take_profit": 0.05
+    },
+    "metrics": {
+      "total_return": 3421.488760217983,
+      "sharpe_ratio": 5.513075180027054,
+      "max_drawdown": -203.74223433242506,
+      "win_rate": 84.61538461538461,
+      "profit_factor": 465.17507575757213,
+      "total_trades": 13,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T15:13:44.257331",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "Chanlun_ADAUSDT_1755068902",
+    "strategy_type": "Chanlun",
+    "symbol": "ADAUSDT",
+    "params": {
+      "min_swing_length": 7,
+      "trend_confirmation": 0.01,
+      "position_size": 5.0,
+      "stop_loss": 0.01,
+      "take_profit": 0.03
+    },
+    "metrics": {
+      "total_return": 117083.05919770287,
+      "sharpe_ratio": 5.386477240997797,
+      "max_drawdown": -152.05567351200833,
+      "win_rate": 96.49484536082474,
+      "profit_factor": 2230.103987179485,
+      "total_trades": 485,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T15:13:38.249385",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "ML_ADAUSDT_1755068754",
+    "strategy_type": "ML",
+    "symbol": "ADAUSDT",
+    "params": {
+      "lookback_period": 30,
+      "prediction_horizon": 3,
+      "model_type": "gradient_boosting",
+      "position_size": 5.0,
+      "stop_loss": 0.03,
+      "take_profit": 0.08
+    },
+    "metrics": {
+      "total_return": 85205.37502135657,
+      "sharpe_ratio": 2.8454111980857535,
+      "max_drawdown": -509.9823167606355,
+      "win_rate": 99.06542056074767,
+      "profit_factor": 999.99,
+      "total_trades": 107,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T15:08:17.225032",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "RSI_ADAUSDT_1755068747",
+    "strategy_type": "RSI",
+    "symbol": "ADAUSDT",
+    "params": {
+      "rsi_period": 14,
+      "overbought": 79,
+      "oversold": 33,
+      "position_size": 1.0,
+      "stop_loss": 0.03,
+      "take_profit": 0.1
+    },
+    "metrics": {
+      "total_return": 6226.5967986230635,
+      "sharpe_ratio": 0.3403120561293187,
+      "max_drawdown": -102.56127366609293,
+      "win_rate": 97.5609756097561,
+      "profit_factor": 999.99,
+      "total_trades": 41,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T15:05:49.400895",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "MA_ADAUSDT_1755068741",
+    "strategy_type": "MA",
+    "symbol": "ADAUSDT",
+    "params": {
+      "short_window": 13,
+      "long_window": 57,
+      "position_size": 0.5,
+      "stop_loss": 0.01,
+      "take_profit": 0.03
+    },
+    "metrics": {
+      "total_return": 777.558063692098,
+      "sharpe_ratio": 13.715492707266865,
+      "max_drawdown": -50.935558583106264,
+      "win_rate": 83.33333333333334,
+      "profit_factor": 377.60461038960835,
+      "total_trades": 12,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T15:05:42.846397",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "Chanlun_ADAUSDT_1755068357",
+    "strategy_type": "Chanlun",
+    "symbol": "ADAUSDT",
+    "params": {
+      "min_swing_length": 3,
+      "trend_confirmation": 0.01,
+      "position_size": 5.0,
+      "stop_loss": 0.03,
+      "take_profit": 0.1
+    },
+    "metrics": {
+      "total_return": 43964.75492516533,
+      "sharpe_ratio": 5.379764732698006,
+      "max_drawdown": -152.05567351200833,
+      "win_rate": 94.05405405405406,
+      "profit_factor": 1199.7620181818145,
+      "total_trades": 185,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T15:05:36.843638",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "ML_ADAUSDT_1755068210",
+    "strategy_type": "ML",
+    "symbol": "ADAUSDT",
+    "params": {
+      "lookback_period": 35,
+      "prediction_horizon": 2,
+      "model_type": "gradient_boosting",
+      "position_size": 5.0,
+      "stop_loss": 0.03,
+      "take_profit": 0.02
+    },
+    "metrics": {
+      "total_return": 71573.85201446281,
+      "sharpe_ratio": 2.659658428014416,
+      "max_drawdown": -501.1887052341597,
+      "win_rate": 91.91919191919192,
+      "profit_factor": 660.302937219738,
+      "total_trades": 99,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T14:59:12.489363",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "RSI_ADAUSDT_1755068203",
+    "strategy_type": "RSI",
+    "symbol": "ADAUSDT",
+    "params": {
+      "rsi_period": 14,
+      "overbought": 79,
+      "oversold": 29,
+      "position_size": 1.0,
+      "stop_loss": 0.02,
+      "take_profit": 0.03
+    },
+    "metrics": {
+      "total_return": 6226.5967986230635,
+      "sharpe_ratio": 0.3403120561293187,
+      "max_drawdown": -102.56127366609293,
+      "win_rate": 97.5609756097561,
+      "profit_factor": 999.99,
+      "total_trades": 41,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T14:56:45.006059",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "MA_ADAUSDT_1755068197",
+    "strategy_type": "MA",
+    "symbol": "ADAUSDT",
+    "params": {
+      "short_window": 7,
+      "long_window": 93,
+      "position_size": 0.5,
+      "stop_loss": 0.01,
+      "take_profit": 0.03
+    },
+    "metrics": {
+      "total_return": 510.30426641586865,
+      "sharpe_ratio": 13.834552873789546,
+      "max_drawdown": -50.733994528043766,
+      "win_rate": 77.77777777777779,
+      "profit_factor": 299.14263513513663,
+      "total_trades": 9,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T14:56:38.511362",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "Chanlun_ADAUSDT_1755067875",
+    "strategy_type": "Chanlun",
+    "symbol": "ADAUSDT",
+    "params": {
+      "min_swing_length": 6,
+      "trend_confirmation": 0.05,
+      "position_size": 5.0,
+      "stop_loss": 0.02,
+      "take_profit": 0.1
+    },
+    "metrics": {
+      "total_return": 117083.05919770287,
+      "sharpe_ratio": 5.386477240997797,
+      "max_drawdown": -152.05567351200833,
+      "win_rate": 96.49484536082474,
+      "profit_factor": 2230.103987179485,
+      "total_trades": 485,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T14:56:32.463603",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "ML_ADAUSDT_1755067727",
+    "strategy_type": "ML",
+    "symbol": "ADAUSDT",
+    "params": {
+      "lookback_period": 45,
+      "prediction_horizon": 2,
+      "model_type": "gradient_boosting",
+      "position_size": 2.0,
+      "stop_loss": 0.01,
+      "take_profit": 0.08
+    },
+    "metrics": {
+      "total_return": 29027.932920110197,
+      "sharpe_ratio": 5.497288877061745,
+      "max_drawdown": -200.47548209366389,
+      "win_rate": 92.0,
+      "profit_factor": 673.2401569506798,
+      "total_trades": 100,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T14:51:10.649510",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "RSI_ADAUSDT_1755067721",
+    "strategy_type": "RSI",
+    "symbol": "ADAUSDT",
+    "params": {
+      "rsi_period": 13,
+      "overbought": 66,
+      "oversold": 35,
+      "position_size": 2.0,
+      "stop_loss": 0.05,
+      "take_profit": 0.05
+    },
+    "metrics": {
+      "total_return": 66526.23703958694,
+      "sharpe_ratio": 5.548508738331218,
+      "max_drawdown": -205.12254733218586,
+      "win_rate": 99.52153110047847,
+      "profit_factor": 999.99,
+      "total_trades": 209,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T14:48:42.624270",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "MA_ADAUSDT_1755067715",
+    "strategy_type": "MA",
+    "symbol": "ADAUSDT",
+    "params": {
+      "short_window": 17,
+      "long_window": 69,
+      "position_size": 2.0,
+      "stop_loss": 0.02,
+      "take_profit": 0.1
+    },
+    "metrics": {
+      "total_return": 2486.3030303030305,
+      "sharpe_ratio": 5.5189528710222975,
+      "max_drawdown": -202.47272727272724,
+      "win_rate": 80.0,
+      "profit_factor": 711.0431944444571,
+      "total_trades": 10,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T14:48:36.113774",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "Chanlun_ADAUSDT_1755067394",
+    "strategy_type": "Chanlun",
+    "symbol": "ADAUSDT",
+    "params": {
+      "min_swing_length": 6,
+      "trend_confirmation": 0.02,
+      "position_size": 5.0,
+      "stop_loss": 0.05,
+      "take_profit": 0.1
+    },
+    "metrics": {
+      "total_return": 117083.05919770287,
+      "sharpe_ratio": 5.386477240997797,
+      "max_drawdown": -152.05567351200833,
+      "win_rate": 96.49484536082474,
+      "profit_factor": 2230.103987179485,
+      "total_trades": 485,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T14:48:30.097093",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "ML_ADAUSDT_1755067354",
+    "strategy_type": "ML",
+    "symbol": "ADAUSDT",
+    "params": {
+      "lookback_period": 26,
+      "prediction_horizon": 1,
+      "model_type": "logistic_regression",
+      "position_size": 5.0,
+      "stop_loss": 0.03,
+      "take_profit": 0.08
+    },
+    "metrics": {
+      "total_return": 171560.6933367417,
+      "sharpe_ratio": 2.8113557859263367,
+      "max_drawdown": -505.61247443762767,
+      "win_rate": 93.19148936170212,
+      "profit_factor": 452.2125402144793,
+      "total_trades": 235,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T14:43:09.623622",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "RSI_ADAUSDT_1755067347",
+    "strategy_type": "RSI",
+    "symbol": "ADAUSDT",
+    "params": {
+      "rsi_period": 7,
+      "overbought": 67,
+      "oversold": 23,
+      "position_size": 1.0,
+      "stop_loss": 0.05,
+      "take_profit": 0.02
+    },
+    "metrics": {
+      "total_return": 42080.74379016854,
+      "sharpe_ratio": 0.11567185581103327,
+      "max_drawdown": -101.66331422615944,
+      "win_rate": 99.61089494163424,
+      "profit_factor": 999.99,
+      "total_trades": 257,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T14:42:29.193304",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "MA_ADAUSDT_1755067341",
+    "strategy_type": "MA",
+    "symbol": "ADAUSDT",
+    "params": {
+      "short_window": 20,
+      "long_window": 94,
+      "position_size": 2.0,
+      "stop_loss": 0.03,
+      "take_profit": 0.08
+    },
+    "metrics": {
+      "total_return": 1495.160871044573,
+      "sharpe_ratio": 3.261724105946638,
+      "max_drawdown": -204.82742429397751,
+      "win_rate": 85.71428571428571,
+      "profit_factor": 999.99,
+      "total_trades": 7,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T14:42:22.644510",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "Chanlun_ADAUSDT_1755067020",
+    "strategy_type": "Chanlun",
+    "symbol": "ADAUSDT",
+    "params": {
+      "min_swing_length": 7,
+      "trend_confirmation": 0.01,
+      "position_size": 1.0,
+      "stop_loss": 0.05,
+      "take_profit": 0.05
+    },
+    "metrics": {
+      "total_return": 23416.611839540554,
+      "sharpe_ratio": 25.751845620719127,
+      "max_drawdown": -30.41113470240167,
+      "win_rate": 96.49484536082474,
+      "profit_factor": 2230.1039871794856,
+      "total_trades": 485,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T14:42:16.637528",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "ML_ADAUSDT_1755066980",
+    "strategy_type": "ML",
+    "symbol": "ADAUSDT",
+    "params": {
+      "lookback_period": 26,
+      "prediction_horizon": 5,
+      "model_type": "logistic_regression",
+      "position_size": 5.0,
+      "stop_loss": 0.05,
+      "take_profit": 0.1
+    },
+    "metrics": {
+      "total_return": 198716.79454514364,
+      "sharpe_ratio": 2.8654931226457054,
+      "max_drawdown": -503.9199726402188,
+      "win_rate": 96.06299212598425,
+      "profit_factor": 797.4801361161556,
+      "total_trades": 254,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T14:36:55.386008",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "RSI_ADAUSDT_1755066973",
+    "strategy_type": "RSI",
+    "symbol": "ADAUSDT",
+    "params": {
+      "rsi_period": 8,
+      "overbought": 77,
+      "oversold": 30,
+      "position_size": 0.5,
+      "stop_loss": 0.03,
+      "take_profit": 0.05
+    },
+    "metrics": {
+      "total_return": 9294.71762202536,
+      "sharpe_ratio": 14.013189447189399,
+      "max_drawdown": -50.83165711307972,
+      "win_rate": 99.12280701754386,
+      "profit_factor": 999.99,
+      "total_trades": 114,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T14:36:15.095083",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "MA_ADAUSDT_1755066967",
+    "strategy_type": "MA",
+    "symbol": "ADAUSDT",
+    "params": {
+      "short_window": 10,
+      "long_window": 98,
+      "position_size": 0.1,
+      "stop_loss": 0.05,
+      "take_profit": 0.03
+    },
+    "metrics": {
+      "total_return": 99.67466621369117,
+      "sharpe_ratio": 54.344898388634164,
+      "max_drawdown": -10.212140309155766,
+      "win_rate": 77.77777777777779,
+      "profit_factor": 265.4759876543211,
+      "total_trades": 9,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T14:36:08.580360",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "Chanlun_ADAUSDT_1755066584",
+    "strategy_type": "Chanlun",
+    "symbol": "ADAUSDT",
+    "params": {
+      "min_swing_length": 5,
+      "trend_confirmation": 0.01,
       "position_size": 5.0,
       "stop_loss": 0.03,
       "take_profit": 0.03
     },
     "metrics": {
-      "total_return": 10436.725860426344,
-      "sharpe_ratio": 3.1128143347441823,
+      "total_return": 43964.75492516533,
+      "sharpe_ratio": 5.379764732698006,
+      "max_drawdown": -152.05567351200833,
+      "win_rate": 94.05405405405406,
+      "profit_factor": 1199.7620181818145,
+      "total_trades": 185,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T14:36:02.590761",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "ML_ADAUSDT_1755066436",
+    "strategy_type": "ML",
+    "symbol": "ADAUSDT",
+    "params": {
+      "lookback_period": 13,
+      "prediction_horizon": 1,
+      "model_type": "gradient_boosting",
+      "position_size": 1.0,
+      "stop_loss": 0.02,
+      "take_profit": 0.1
+    },
+    "metrics": {
+      "total_return": 15346.381105990784,
+      "sharpe_ratio": 0.1677138141005345,
+      "max_drawdown": -102.09692780337937,
+      "win_rate": 99.0,
+      "profit_factor": 999.99,
+      "total_trades": 100,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T14:29:39.255281",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "RSI_ADAUSDT_1755066429",
+    "strategy_type": "RSI",
+    "symbol": "ADAUSDT",
+    "params": {
+      "rsi_period": 10,
+      "overbought": 75,
+      "oversold": 24,
+      "position_size": 2.0,
+      "stop_loss": 0.01,
+      "take_profit": 0.05
+    },
+    "metrics": {
+      "total_return": 34635.58968212611,
+      "sharpe_ratio": 5.500383617453571,
+      "max_drawdown": -203.32662845231891,
+      "win_rate": 99.05660377358491,
+      "profit_factor": 999.99,
+      "total_trades": 106,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T14:27:11.412309",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "MA_ADAUSDT_1755066423",
+    "strategy_type": "MA",
+    "symbol": "ADAUSDT",
+    "params": {
+      "short_window": 10,
+      "long_window": 77,
+      "position_size": 1.0,
+      "stop_loss": 0.02,
+      "take_profit": 0.03
+    },
+    "metrics": {
+      "total_return": 873.8783344733242,
+      "sharpe_ratio": 0.20519779733697752,
+      "max_drawdown": -101.46798905608753,
+      "win_rate": 75.0,
+      "profit_factor": 223.50059139785012,
+      "total_trades": 8,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T14:27:04.918039",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "Chanlun_ADAUSDT_1755066039",
+    "strategy_type": "Chanlun",
+    "symbol": "ADAUSDT",
+    "params": {
+      "min_swing_length": 3,
+      "trend_confirmation": 0.05,
+      "position_size": 2.0,
+      "stop_loss": 0.05,
+      "take_profit": 0.05
+    },
+    "metrics": {
+      "total_return": 17585.90197006614,
+      "sharpe_ratio": 10.623039071597763,
+      "max_drawdown": -60.82226940480333,
+      "win_rate": 94.05405405405406,
+      "profit_factor": 1199.762018181815,
+      "total_trades": 185,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T14:26:58.886487",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "ML_ADAUSDT_1755065892",
+    "strategy_type": "ML",
+    "symbol": "ADAUSDT",
+    "params": {
+      "lookback_period": 13,
+      "prediction_horizon": 1,
+      "model_type": "gradient_boosting",
+      "position_size": 5.0,
+      "stop_loss": 0.03,
+      "take_profit": 0.08
+    },
+    "metrics": {
+      "total_return": 75673.88649940262,
+      "sharpe_ratio": 2.781658639872637,
+      "max_drawdown": -510.48463901689695,
+      "win_rate": 98.98989898989899,
+      "profit_factor": 999.99,
+      "total_trades": 99,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T14:20:34.794119",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "RSI_ADAUSDT_1755065885",
+    "strategy_type": "RSI",
+    "symbol": "ADAUSDT",
+    "params": {
+      "rsi_period": 20,
+      "overbought": 72,
+      "oversold": 35,
+      "position_size": 1.0,
+      "stop_loss": 0.05,
+      "take_profit": 0.08
+    },
+    "metrics": {
+      "total_return": 11058.32266805628,
+      "sharpe_ratio": 0.3259801541844145,
+      "max_drawdown": -101.66331422615944,
+      "win_rate": 98.61111111111111,
+      "profit_factor": 999.99,
+      "total_trades": 72,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T14:18:06.992617",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "MA_ADAUSDT_1755065879",
+    "strategy_type": "MA",
+    "symbol": "ADAUSDT",
+    "params": {
+      "short_window": 5,
+      "long_window": 66,
+      "position_size": 5.0,
+      "stop_loss": 0.01,
+      "take_profit": 0.03
+    },
+    "metrics": {
+      "total_return": 6877.7785252043595,
+      "sharpe_ratio": 3.086874793935526,
+      "max_drawdown": -506.71594005449595,
+      "win_rate": 81.81818181818183,
+      "profit_factor": 257.3322596153827,
+      "total_trades": 11,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T14:18:00.485400",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "Chanlun_ADAUSDT_1755065494",
+    "strategy_type": "Chanlun",
+    "symbol": "ADAUSDT",
+    "params": {
+      "min_swing_length": 5,
+      "trend_confirmation": 0.01,
+      "position_size": 2.0,
+      "stop_loss": 0.05,
+      "take_profit": 0.08
+    },
+    "metrics": {
+      "total_return": 17585.90197006614,
+      "sharpe_ratio": 10.623039071597763,
+      "max_drawdown": -60.82226940480333,
+      "win_rate": 94.05405405405406,
+      "profit_factor": 1199.762018181815,
+      "total_trades": 185,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T14:17:54.485445",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "ML_ADAUSDT_1755065346",
+    "strategy_type": "ML",
+    "symbol": "ADAUSDT",
+    "params": {
+      "lookback_period": 39,
+      "prediction_horizon": 1,
+      "model_type": "gradient_boosting",
+      "position_size": 5.0,
+      "stop_loss": 0.05,
+      "take_profit": 0.1
+    },
+    "metrics": {
+      "total_return": 76466.29339477728,
+      "sharpe_ratio": 2.7816597905278235,
+      "max_drawdown": -510.48463901689695,
+      "win_rate": 99.0,
+      "profit_factor": 999.99,
+      "total_trades": 100,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T14:11:29.162490",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "RSI_ADAUSDT_1755065340",
+    "strategy_type": "RSI",
+    "symbol": "ADAUSDT",
+    "params": {
+      "rsi_period": 20,
+      "overbought": 78,
+      "oversold": 24,
+      "position_size": 1.0,
+      "stop_loss": 0.05,
+      "take_profit": 0.02
+    },
+    "metrics": {
+      "total_return": 2732.2272518949403,
+      "sharpe_ratio": 1.0586276093757614,
+      "max_drawdown": -100.2057641459545,
+      "win_rate": 95.0,
+      "profit_factor": 999.99,
+      "total_trades": 20,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T14:09:01.656967",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "MA_ADAUSDT_1755065334",
+    "strategy_type": "MA",
+    "symbol": "ADAUSDT",
+    "params": {
+      "short_window": 8,
+      "long_window": 96,
+      "position_size": 2.0,
+      "stop_loss": 0.01,
+      "take_profit": 0.02
+    },
+    "metrics": {
+      "total_return": 2046.5885439890244,
+      "sharpe_ratio": 5.478849108291749,
+      "max_drawdown": -202.36086434573824,
+      "win_rate": 77.77777777777779,
+      "profit_factor": 395.88491071429013,
+      "total_trades": 9,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T14:08:55.107354",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "Chanlun_ADAUSDT_1755064951",
+    "strategy_type": "Chanlun",
+    "symbol": "ADAUSDT",
+    "params": {
+      "min_swing_length": 3,
+      "trend_confirmation": 0.05,
+      "position_size": 5.0,
+      "stop_loss": 0.03,
+      "take_profit": 0.05
+    },
+    "metrics": {
+      "total_return": 43964.75492516533,
+      "sharpe_ratio": 5.379764732698006,
+      "max_drawdown": -152.05567351200833,
+      "win_rate": 94.05405405405406,
+      "profit_factor": 1199.7620181818145,
+      "total_trades": 185,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T14:08:49.066004",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "ML_ADAUSDT_1755064911",
+    "strategy_type": "ML",
+    "symbol": "ADAUSDT",
+    "params": {
+      "lookback_period": 34,
+      "prediction_horizon": 1,
+      "model_type": "logistic_regression",
+      "position_size": 0.5,
+      "stop_loss": 0.03,
+      "take_profit": 0.1
+    },
+    "metrics": {
+      "total_return": 17160.12320211315,
+      "sharpe_ratio": 14.313159920767085,
+      "max_drawdown": -50.56124744376278,
+      "win_rate": 93.19148936170212,
+      "profit_factor": 452.5315750670262,
+      "total_trades": 235,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T14:02:26.327777",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "RSI_ADAUSDT_1755064904",
+    "strategy_type": "RSI",
+    "symbol": "ADAUSDT",
+    "params": {
+      "rsi_period": 14,
+      "overbought": 67,
+      "oversold": 23,
+      "position_size": 2.0,
+      "stop_loss": 0.05,
+      "take_profit": 0.02
+    },
+    "metrics": {
+      "total_return": 59795.13811347024,
+      "sharpe_ratio": 5.494228462471575,
+      "max_drawdown": -202.94973894883395,
+      "win_rate": 99.45945945945947,
+      "profit_factor": 999.99,
+      "total_trades": 185,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T14:01:46.068365",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "MA_ADAUSDT_1755064898",
+    "strategy_type": "MA",
+    "symbol": "ADAUSDT",
+    "params": {
+      "short_window": 9,
+      "long_window": 24,
+      "position_size": 0.5,
+      "stop_loss": 0.03,
+      "take_profit": 0.03
+    },
+    "metrics": {
+      "total_return": 1738.2768424669307,
+      "sharpe_ratio": 13.905985093228216,
+      "max_drawdown": -50.85742140525682,
+      "win_rate": 86.95652173913044,
+      "profit_factor": 413.56683593750256,
+      "total_trades": 23,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T14:01:39.502554",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "Chanlun_ADAUSDT_1755064575",
+    "strategy_type": "Chanlun",
+    "symbol": "ADAUSDT",
+    "params": {
+      "min_swing_length": 6,
+      "trend_confirmation": 0.03,
+      "position_size": 5.0,
+      "stop_loss": 0.02,
+      "take_profit": 0.08
+    },
+    "metrics": {
+      "total_return": 117083.05919770287,
+      "sharpe_ratio": 5.386477240997797,
+      "max_drawdown": -152.05567351200833,
+      "win_rate": 96.49484536082474,
+      "profit_factor": 2230.103987179485,
+      "total_trades": 485,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T14:01:33.484583",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "ML_ADAUSDT_1755064427",
+    "strategy_type": "ML",
+    "symbol": "ADAUSDT",
+    "params": {
+      "lookback_period": 39,
+      "prediction_horizon": 1,
+      "model_type": "gradient_boosting",
+      "position_size": 5.0,
+      "stop_loss": 0.01,
+      "take_profit": 0.1
+    },
+    "metrics": {
+      "total_return": 76556.53669568186,
+      "sharpe_ratio": 2.7816572317279493,
+      "max_drawdown": -510.48463901689695,
+      "win_rate": 99.0,
+      "profit_factor": 999.99,
+      "total_trades": 100,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T13:56:10.681805",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "RSI_ADAUSDT_1755064420",
+    "strategy_type": "RSI",
+    "symbol": "ADAUSDT",
+    "params": {
+      "rsi_period": 10,
+      "overbought": 69,
+      "oversold": 27,
+      "position_size": 1.0,
+      "stop_loss": 0.05,
+      "take_profit": 0.08
+    },
+    "metrics": {
+      "total_return": 30322.40557582076,
+      "sharpe_ratio": 0.05388732482614596,
+      "max_drawdown": -101.66331422615944,
+      "win_rate": 99.47089947089947,
+      "profit_factor": 999.99,
+      "total_trades": 189,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T13:53:42.353544",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "MA_ADAUSDT_1755064414",
+    "strategy_type": "MA",
+    "symbol": "ADAUSDT",
+    "params": {
+      "short_window": 7,
+      "long_window": 77,
+      "position_size": 0.1,
+      "stop_loss": 0.02,
+      "take_profit": 0.08
+    },
+    "metrics": {
+      "total_return": 104.86129164531009,
+      "sharpe_ratio": 55.20847286553983,
+      "max_drawdown": -10.155224671108828,
+      "win_rate": 77.77777777777779,
+      "profit_factor": 290.75386075949297,
+      "total_trades": 9,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T13:53:35.817030",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "Chanlun_ADAUSDT_1755064029",
+    "strategy_type": "Chanlun",
+    "symbol": "ADAUSDT",
+    "params": {
+      "min_swing_length": 5,
+      "trend_confirmation": 0.05,
+      "position_size": 2.0,
+      "stop_loss": 0.03,
+      "take_profit": 0.03
+    },
+    "metrics": {
+      "total_return": 17585.90197006614,
+      "sharpe_ratio": 10.623039071597763,
+      "max_drawdown": -60.82226940480333,
+      "win_rate": 94.05405405405406,
+      "profit_factor": 1199.762018181815,
+      "total_trades": 185,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T13:53:29.825064",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "ML_ADAUSDT_1755063989",
+    "strategy_type": "ML",
+    "symbol": "ADAUSDT",
+    "params": {
+      "lookback_period": 10,
+      "prediction_horizon": 3,
+      "model_type": "logistic_regression",
+      "position_size": 1.0,
+      "stop_loss": 0.03,
+      "take_profit": 0.02
+    },
+    "metrics": {
+      "total_return": 51666.025633561665,
+      "sharpe_ratio": 0.010429140655367056,
+      "max_drawdown": -100.64794520547942,
+      "win_rate": 96.06060606060606,
+      "profit_factor": 958.2619576271265,
+      "total_trades": 330,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T13:47:04.946700",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "RSI_ADAUSDT_1755063982",
+    "strategy_type": "RSI",
+    "symbol": "ADAUSDT",
+    "params": {
+      "rsi_period": 17,
+      "overbought": 80,
+      "oversold": 24,
+      "position_size": 5.0,
+      "stop_loss": 0.01,
+      "take_profit": 0.1
+    },
+    "metrics": {
+      "total_return": 15090.974765053952,
+      "sharpe_ratio": 3.2976368633032447,
+      "max_drawdown": -507.37434737208497,
+      "win_rate": 95.45454545454545,
+      "profit_factor": 999.99,
+      "total_trades": 22,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T13:46:24.447934",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "MA_ADAUSDT_1755063976",
+    "strategy_type": "MA",
+    "symbol": "ADAUSDT",
+    "params": {
+      "short_window": 18,
+      "long_window": 57,
+      "position_size": 5.0,
+      "stop_loss": 0.01,
+      "take_profit": 0.1
+    },
+    "metrics": {
+      "total_return": 7797.538317438692,
+      "sharpe_ratio": 3.0612309396605,
+      "max_drawdown": -511.56948228882834,
+      "win_rate": 83.33333333333334,
+      "profit_factor": 263.41040540540274,
+      "total_trades": 12,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T13:46:17.956314",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "Chanlun_ADAUSDT_1755063592",
+    "strategy_type": "Chanlun",
+    "symbol": "ADAUSDT",
+    "params": {
+      "min_swing_length": 3,
+      "trend_confirmation": 0.03,
+      "position_size": 2.0,
+      "stop_loss": 0.01,
+      "take_profit": 0.05
+    },
+    "metrics": {
+      "total_return": 17585.90197006614,
+      "sharpe_ratio": 10.623039071597763,
+      "max_drawdown": -60.82226940480333,
+      "win_rate": 94.05405405405406,
+      "profit_factor": 1199.762018181815,
+      "total_trades": 185,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T13:46:11.939763",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "ML_ADAUSDT_1755063543",
+    "strategy_type": "ML",
+    "symbol": "ADAUSDT",
+    "params": {
+      "lookback_period": 43,
+      "prediction_horizon": 1,
+      "model_type": "random_forest",
+      "position_size": 0.1,
+      "stop_loss": 0.03,
+      "take_profit": 0.1
+    },
+    "metrics": {
+      "total_return": 245.67078509011458,
+      "sharpe_ratio": 58.3369919780649,
+      "max_drawdown": -10.233921354451123,
+      "win_rate": 95.45454545454545,
+      "profit_factor": 999.99,
+      "total_trades": 22,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T13:39:47.129865",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "RSI_ADAUSDT_1755063537",
+    "strategy_type": "RSI",
+    "symbol": "ADAUSDT",
+    "params": {
+      "rsi_period": 9,
+      "overbought": 72,
+      "oversold": 28,
+      "position_size": 0.1,
+      "stop_loss": 0.01,
+      "take_profit": 0.02
+    },
+    "metrics": {
+      "total_return": 2516.551774526679,
+      "sharpe_ratio": 54.08391994674982,
+      "max_drawdown": -10.25612736660929,
+      "win_rate": 99.35897435897436,
+      "profit_factor": 999.99,
+      "total_trades": 156,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T13:38:58.936364",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "MA_ADAUSDT_1755063531",
+    "strategy_type": "MA",
+    "symbol": "ADAUSDT",
+    "params": {
+      "short_window": 13,
+      "long_window": 68,
+      "position_size": 1.0,
+      "stop_loss": 0.03,
+      "take_profit": 0.1
+    },
+    "metrics": {
+      "total_return": 1223.995722563054,
+      "sharpe_ratio": 0.04268402418798414,
+      "max_drawdown": -102.02569870483977,
+      "win_rate": 80.0,
+      "profit_factor": 200.46472222222312,
+      "total_trades": 10,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T13:38:52.442864",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "Chanlun_ADAUSDT_1755063147",
+    "strategy_type": "Chanlun",
+    "symbol": "ADAUSDT",
+    "params": {
+      "min_swing_length": 4,
+      "trend_confirmation": 0.02,
+      "position_size": 5.0,
+      "stop_loss": 0.01,
+      "take_profit": 0.05
+    },
+    "metrics": {
+      "total_return": 43964.75492516533,
+      "sharpe_ratio": 5.379764732698006,
+      "max_drawdown": -152.05567351200833,
+      "win_rate": 94.05405405405406,
+      "profit_factor": 1199.7620181818145,
+      "total_trades": 185,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T13:38:46.393163",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "ML_ADAUSDT_1755063000",
+    "strategy_type": "ML",
+    "symbol": "ADAUSDT",
+    "params": {
+      "lookback_period": 16,
+      "prediction_horizon": 5,
+      "model_type": "gradient_boosting",
+      "position_size": 5.0,
+      "stop_loss": 0.01,
+      "take_profit": 0.05
+    },
+    "metrics": {
+      "total_return": 59441.68289320951,
+      "sharpe_ratio": 2.9603147213106005,
       "max_drawdown": -500.4999999999999,
+      "win_rate": 98.88888888888889,
+      "profit_factor": 999.99,
+      "total_trades": 90,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T13:32:22.416448",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "RSI_ADAUSDT_1755062993",
+    "strategy_type": "RSI",
+    "symbol": "ADAUSDT",
+    "params": {
+      "rsi_period": 18,
+      "overbought": 70,
+      "oversold": 20,
+      "position_size": 0.1,
+      "stop_loss": 0.01,
+      "take_profit": 0.03
+    },
+    "metrics": {
+      "total_return": 1802.394427992244,
+      "sharpe_ratio": 52.573542437494694,
+      "max_drawdown": -10.020576414595453,
+      "win_rate": 99.11504424778761,
+      "profit_factor": 999.99,
+      "total_trades": 113,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T13:29:55.086085",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "MA_ADAUSDT_1755062987",
+    "strategy_type": "MA",
+    "symbol": "ADAUSDT",
+    "params": {
+      "short_window": 12,
+      "long_window": 42,
+      "position_size": 0.5,
+      "stop_loss": 0.05,
+      "take_profit": 0.1
+    },
+    "metrics": {
+      "total_return": 978.0054483837331,
+      "sharpe_ratio": 13.457651683938366,
+      "max_drawdown": -50.20641293013555,
       "win_rate": 92.85714285714286,
       "profit_factor": 999.99,
       "total_trades": 14,
       "avg_trade_duration": 1.0
     },
-    "timestamp": "2025-08-13T12:33:58.273079",
+    "timestamp": "2025-08-13T13:29:48.590518",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "Chanlun_ADAUSDT_1755062602",
+    "strategy_type": "Chanlun",
+    "symbol": "ADAUSDT",
+    "params": {
+      "min_swing_length": 5,
+      "trend_confirmation": 0.05,
+      "position_size": 1.0,
+      "stop_loss": 0.03,
+      "take_profit": 0.03
+    },
+    "metrics": {
+      "total_return": 8792.95098503307,
+      "sharpe_ratio": 25.12018767936672,
+      "max_drawdown": -30.41113470240167,
+      "win_rate": 94.05405405405406,
+      "profit_factor": 1199.762018181815,
+      "total_trades": 185,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T13:29:42.588526",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "ML_ADAUSDT_1755062454",
+    "strategy_type": "ML",
+    "symbol": "ADAUSDT",
+    "params": {
+      "lookback_period": 48,
+      "prediction_horizon": 3,
+      "model_type": "gradient_boosting",
+      "position_size": 1.0,
+      "stop_loss": 0.05,
+      "take_profit": 0.05
+    },
+    "metrics": {
+      "total_return": 16861.290141807625,
+      "sharpe_ratio": 0.022803655554942983,
+      "max_drawdown": -101.99646335212711,
+      "win_rate": 99.05660377358491,
+      "profit_factor": 999.99,
+      "total_trades": 106,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T13:23:17.038592",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "RSI_ADAUSDT_1755062447",
+    "strategy_type": "RSI",
+    "symbol": "ADAUSDT",
+    "params": {
+      "rsi_period": 10,
+      "overbought": 72,
+      "oversold": 27,
+      "position_size": 0.1,
+      "stop_loss": 0.02,
+      "take_profit": 0.05
+    },
+    "metrics": {
+      "total_return": 2286.9200868507896,
+      "sharpe_ratio": 53.58986179889838,
+      "max_drawdown": -10.166331422615949,
+      "win_rate": 99.29577464788733,
+      "profit_factor": 999.99,
+      "total_trades": 142,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T13:20:49.085900",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "MA_ADAUSDT_1755062441",
+    "strategy_type": "MA",
+    "symbol": "ADAUSDT",
+    "params": {
+      "short_window": 14,
+      "long_window": 45,
+      "position_size": 2.0,
+      "stop_loss": 0.01,
+      "take_profit": 0.02
+    },
+    "metrics": {
+      "total_return": 3945.407234782609,
+      "sharpe_ratio": 5.49304830565026,
+      "max_drawdown": -200.68695652173906,
+      "win_rate": 92.85714285714286,
+      "profit_factor": 999.99,
+      "total_trades": 14,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T13:20:42.506094",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "Chanlun_ADAUSDT_1755062055",
+    "strategy_type": "Chanlun",
+    "symbol": "ADAUSDT",
+    "params": {
+      "min_swing_length": 3,
+      "trend_confirmation": 0.02,
+      "position_size": 2.0,
+      "stop_loss": 0.01,
+      "take_profit": 0.1
+    },
+    "metrics": {
+      "total_return": 17585.90197006614,
+      "sharpe_ratio": 10.623039071597763,
+      "max_drawdown": -60.82226940480333,
+      "win_rate": 94.05405405405406,
+      "profit_factor": 1199.762018181815,
+      "total_trades": 185,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T13:20:36.503255",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "ML_ADAUSDT_1755062007",
+    "strategy_type": "ML",
+    "symbol": "ADAUSDT",
+    "params": {
+      "lookback_period": 12,
+      "prediction_horizon": 5,
+      "model_type": "random_forest",
+      "position_size": 0.1,
+      "stop_loss": 0.01,
+      "take_profit": 0.02
+    },
+    "metrics": {
+      "total_return": 1350.601184817918,
+      "sharpe_ratio": 52.38587062772259,
+      "max_drawdown": -10.098904086168568,
+      "win_rate": 98.85057471264368,
+      "profit_factor": 999.99,
+      "total_trades": 87,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T13:14:10.866310",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "RSI_ADAUSDT_1755062001",
+    "strategy_type": "RSI",
+    "symbol": "ADAUSDT",
+    "params": {
+      "rsi_period": 20,
+      "overbought": 66,
+      "oversold": 35,
+      "position_size": 1.0,
+      "stop_loss": 0.03,
+      "take_profit": 0.05
+    },
+    "metrics": {
+      "total_return": 27153.895066875113,
+      "sharpe_ratio": 0.2173297939840724,
+      "max_drawdown": -101.66331422615944,
+      "win_rate": 99.40828402366864,
+      "profit_factor": 999.99,
+      "total_trades": 169,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T13:13:22.484771",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "MA_ADAUSDT_1755061994",
+    "strategy_type": "MA",
+    "symbol": "ADAUSDT",
+    "params": {
+      "short_window": 10,
+      "long_window": 36,
+      "position_size": 0.1,
+      "stop_loss": 0.03,
+      "take_profit": 0.03
+    },
+    "metrics": {
+      "total_return": 224.6703714632876,
+      "sharpe_ratio": 52.72516382851144,
+      "max_drawdown": -10.082904009720533,
+      "win_rate": 87.5,
+      "profit_factor": 5301.650714286298,
+      "total_trades": 16,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T13:13:15.994591",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "Chanlun_ADAUSDT_1755061671",
+    "strategy_type": "Chanlun",
+    "symbol": "ADAUSDT",
+    "params": {
+      "min_swing_length": 7,
+      "trend_confirmation": 0.02,
+      "position_size": 5.0,
+      "stop_loss": 0.05,
+      "take_profit": 0.02
+    },
+    "metrics": {
+      "total_return": 117083.05919770287,
+      "sharpe_ratio": 5.386477240997797,
+      "max_drawdown": -152.05567351200833,
+      "win_rate": 96.49484536082474,
+      "profit_factor": 2230.103987179485,
+      "total_trades": 485,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T13:13:09.870499",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "ML_ADAUSDT_1755061523",
+    "strategy_type": "ML",
+    "symbol": "ADAUSDT",
+    "params": {
+      "lookback_period": 26,
+      "prediction_horizon": 1,
+      "model_type": "gradient_boosting",
+      "position_size": 0.1,
+      "stop_loss": 0.03,
+      "take_profit": 0.1
+    },
+    "metrics": {
+      "total_return": 1496.950634920635,
+      "sharpe_ratio": 54.323355732028375,
+      "max_drawdown": -10.209692780337937,
+      "win_rate": 98.9795918367347,
+      "profit_factor": 999.99,
+      "total_trades": 98,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T13:07:46.307980",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "RSI_ADAUSDT_1755061516",
+    "strategy_type": "RSI",
+    "symbol": "ADAUSDT",
+    "params": {
+      "rsi_period": 19,
+      "overbought": 71,
+      "oversold": 22,
+      "position_size": 2.0,
+      "stop_loss": 0.03,
+      "take_profit": 0.02
+    },
+    "metrics": {
+      "total_return": 28701.317680239732,
+      "sharpe_ratio": 5.446271197590716,
+      "max_drawdown": -200.411528291909,
+      "win_rate": 98.88888888888889,
+      "profit_factor": 999.99,
+      "total_trades": 90,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T13:05:18.374689",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "MA_ADAUSDT_1755061510",
+    "strategy_type": "MA",
+    "symbol": "ADAUSDT",
+    "params": {
+      "short_window": 15,
+      "long_window": 76,
+      "position_size": 5.0,
+      "stop_loss": 0.05,
+      "take_profit": 0.1
+    },
+    "metrics": {
+      "total_return": 5217.60409878237,
+      "sharpe_ratio": 3.1253429534215162,
+      "max_drawdown": -508.13162407820255,
+      "win_rate": 77.77777777777779,
+      "profit_factor": 325.3364999999997,
+      "total_trades": 9,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T13:05:11.898823",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "Chanlun_ADAUSDT_1755061125",
+    "strategy_type": "Chanlun",
+    "symbol": "ADAUSDT",
+    "params": {
+      "min_swing_length": 5,
+      "trend_confirmation": 0.02,
+      "position_size": 0.1,
+      "stop_loss": 0.01,
+      "take_profit": 0.1
+    },
+    "metrics": {
+      "total_return": 879.2950985033065,
+      "sharpe_ratio": 105.95028575901281,
+      "max_drawdown": -3.0411134702401617,
+      "win_rate": 94.05405405405406,
+      "profit_factor": 1199.7620181818145,
+      "total_trades": 185,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T13:05:05.867894",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "ML_ADAUSDT_1755061077",
+    "strategy_type": "ML",
+    "symbol": "ADAUSDT",
+    "params": {
+      "lookback_period": 40,
+      "prediction_horizon": 1,
+      "model_type": "random_forest",
+      "position_size": 5.0,
+      "stop_loss": 0.05,
+      "take_profit": 0.05
+    },
+    "metrics": {
+      "total_return": 13741.26936570306,
+      "sharpe_ratio": 3.1829567232963916,
+      "max_drawdown": -513.9717934325007,
+      "win_rate": 95.83333333333334,
+      "profit_factor": 999.99,
+      "total_trades": 24,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T12:58:40.389558",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "RSI_ADAUSDT_1755061070",
+    "strategy_type": "RSI",
+    "symbol": "ADAUSDT",
+    "params": {
+      "rsi_period": 10,
+      "overbought": 74,
+      "oversold": 33,
+      "position_size": 1.0,
+      "stop_loss": 0.03,
+      "take_profit": 0.02
+    },
+    "metrics": {
+      "total_return": 18428.11643717728,
+      "sharpe_ratio": 0.03904824707086892,
+      "max_drawdown": -102.56127366609293,
+      "win_rate": 99.1304347826087,
+      "profit_factor": 999.99,
+      "total_trades": 115,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T12:57:52.292043",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "MA_ADAUSDT_1755061064",
+    "strategy_type": "MA",
+    "symbol": "ADAUSDT",
+    "params": {
+      "short_window": 17,
+      "long_window": 38,
+      "position_size": 0.5,
+      "stop_loss": 0.05,
+      "take_profit": 0.03
+    },
+    "metrics": {
+      "total_return": 1113.3464708957827,
+      "sharpe_ratio": 13.79209743921758,
+      "max_drawdown": -50.21556291390728,
+      "win_rate": 93.75,
+      "profit_factor": 999.99,
+      "total_trades": 16,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T12:57:45.747348",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "Chanlun_ADAUSDT_1755060679",
+    "strategy_type": "Chanlun",
+    "symbol": "ADAUSDT",
+    "params": {
+      "min_swing_length": 4,
+      "trend_confirmation": 0.05,
+      "position_size": 2.0,
+      "stop_loss": 0.01,
+      "take_profit": 0.1
+    },
+    "metrics": {
+      "total_return": 17585.90197006614,
+      "sharpe_ratio": 10.623039071597763,
+      "max_drawdown": -60.82226940480333,
+      "win_rate": 94.05405405405406,
+      "profit_factor": 1199.762018181815,
+      "total_trades": 185,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T12:57:39.679637",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "ML_ADAUSDT_1755060531",
+    "strategy_type": "ML",
+    "symbol": "ADAUSDT",
+    "params": {
+      "lookback_period": 40,
+      "prediction_horizon": 1,
+      "model_type": "gradient_boosting",
+      "position_size": 0.5,
+      "stop_loss": 0.02,
+      "take_profit": 0.02
+    },
+    "metrics": {
+      "total_return": 7558.364319849804,
+      "sharpe_ratio": 14.385521365324156,
+      "max_drawdown": -51.048463901689686,
+      "win_rate": 98.98989898989899,
+      "profit_factor": 999.99,
+      "total_trades": 99,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T12:51:14.560644",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "RSI_ADAUSDT_1755060525",
+    "strategy_type": "RSI",
+    "symbol": "ADAUSDT",
+    "params": {
+      "rsi_period": 11,
+      "overbought": 71,
+      "oversold": 31,
+      "position_size": 0.5,
+      "stop_loss": 0.01,
+      "take_profit": 0.02
+    },
+    "metrics": {
+      "total_return": 11652.047624784853,
+      "sharpe_ratio": 14.233005700566634,
+      "max_drawdown": -51.280636833046465,
+      "win_rate": 99.32432432432432,
+      "profit_factor": 999.99,
+      "total_trades": 148,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T12:48:46.641338",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "MA_ADAUSDT_1755060519",
+    "strategy_type": "MA",
+    "symbol": "ADAUSDT",
+    "params": {
+      "short_window": 7,
+      "long_window": 34,
+      "position_size": 0.5,
+      "stop_loss": 0.02,
+      "take_profit": 0.02
+    },
+    "metrics": {
+      "total_return": 1208.1310434782608,
+      "sharpe_ratio": 13.855607598368257,
+      "max_drawdown": -50.31956521739129,
+      "win_rate": 88.23529411764706,
+      "profit_factor": 2442.3471875000996,
+      "total_trades": 17,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T12:48:40.141357",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "Chanlun_ADAUSDT_1755060133",
+    "strategy_type": "Chanlun",
+    "symbol": "ADAUSDT",
+    "params": {
+      "min_swing_length": 5,
+      "trend_confirmation": 0.05,
+      "position_size": 0.5,
+      "stop_loss": 0.02,
+      "take_profit": 0.02
+    },
+    "metrics": {
+      "total_return": 4396.475492516535,
+      "sharpe_ratio": 42.24163836405083,
+      "max_drawdown": -15.205567351200845,
+      "win_rate": 94.05405405405406,
+      "profit_factor": 1199.762018181815,
+      "total_trades": 185,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T12:48:34.069657",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "ML_ADAUSDT_1755059984",
+    "strategy_type": "ML",
+    "symbol": "ADAUSDT",
+    "params": {
+      "lookback_period": 27,
+      "prediction_horizon": 1,
+      "model_type": "gradient_boosting",
+      "position_size": 1.0,
+      "stop_loss": 0.03,
+      "take_profit": 0.02
+    },
+    "metrics": {
+      "total_return": 15326.38769414576,
+      "sharpe_ratio": 0.16771381251893255,
+      "max_drawdown": -102.09692780337937,
+      "win_rate": 99.0,
+      "profit_factor": 999.99,
+      "total_trades": 100,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T12:42:08.107106",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "RSI_ADAUSDT_1755059978",
+    "strategy_type": "RSI",
+    "symbol": "ADAUSDT",
+    "params": {
+      "rsi_period": 12,
+      "overbought": 71,
+      "oversold": 33,
+      "position_size": 2.0,
+      "stop_loss": 0.03,
+      "take_profit": 0.02
+    },
+    "metrics": {
+      "total_return": 43791.154216867486,
+      "sharpe_ratio": 5.456818349222721,
+      "max_drawdown": -205.12254733218586,
+      "win_rate": 99.28057553956835,
+      "profit_factor": 999.99,
+      "total_trades": 139,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T12:39:39.839919",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "MA_ADAUSDT_1755059972",
+    "strategy_type": "MA",
+    "symbol": "ADAUSDT",
+    "params": {
+      "short_window": 8,
+      "long_window": 87,
+      "position_size": 1.0,
+      "stop_loss": 0.03,
+      "take_profit": 0.05
+    },
+    "metrics": {
+      "total_return": 1020.0957934336525,
+      "sharpe_ratio": 0.2051980673738375,
+      "max_drawdown": -101.46798905608753,
+      "win_rate": 77.77777777777779,
+      "profit_factor": 238.07048387096842,
+      "total_trades": 9,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T12:39:33.348745",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "RSI_ADAUSDT_1755059866",
+    "strategy_type": "RSI",
+    "symbol": "ADAUSDT",
+    "params": {
+      "rsi_period": 10,
+      "overbought": 78,
+      "oversold": 20,
+      "position_size": 0.5,
+      "stop_loss": 0.05,
+      "take_profit": 0.02
+    },
+    "metrics": {
+      "total_return": 6389.667690288713,
+      "sharpe_ratio": 13.809891403375756,
+      "max_drawdown": -50.46994750656169,
+      "win_rate": 98.7012987012987,
+      "profit_factor": 999.99,
+      "total_trades": 77,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T12:37:48.398700",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "MA_ADAUSDT_1755059860",
+    "strategy_type": "MA",
+    "symbol": "ADAUSDT",
+    "params": {
+      "short_window": 7,
+      "long_window": 86,
+      "position_size": 0.1,
+      "stop_loss": 0.01,
+      "take_profit": 0.02
+    },
+    "metrics": {
+      "total_return": 101.45731424676214,
+      "sharpe_ratio": 54.77763451243373,
+      "max_drawdown": -10.180415814587596,
+      "win_rate": 77.77777777777779,
+      "profit_factor": 194.96066371681457,
+      "total_trades": 9,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T12:37:41.850791",
     "trading_mode": "SPOT",
     "start_date": "2025-07-02",
     "end_date": "2025-08-13"
@@ -49,5 +2804,413 @@
     "trading_mode": "SPOT",
     "start_date": "2025-07-02",
     "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "MA_ETHUSDT_1755059637",
+    "strategy_type": "MA",
+    "symbol": "ETHUSDT",
+    "params": {
+      "short_window": 8,
+      "long_window": 50,
+      "position_size": 5.0,
+      "stop_loss": 0.03,
+      "take_profit": 0.03
+    },
+    "metrics": {
+      "total_return": 10436.725860426344,
+      "sharpe_ratio": 3.1128143347441823,
+      "max_drawdown": -500.4999999999999,
+      "win_rate": 92.85714285714286,
+      "profit_factor": 999.99,
+      "total_trades": 14,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T12:33:58.273079",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "ML_ETHUSDT_1755058923",
+    "strategy_type": "ML",
+    "symbol": "ETHUSDT",
+    "params": {
+      "lookback_period": 13,
+      "prediction_horizon": 3,
+      "model_type": "random_forest",
+      "position_size": 0.5,
+      "stop_loss": 0.05,
+      "take_profit": 0.03
+    },
+    "metrics": {
+      "total_return": 0.0,
+      "sharpe_ratio": 0.0,
+      "max_drawdown": 0.0,
+      "win_rate": 0.0,
+      "profit_factor": 0.0,
+      "total_trades": 0,
+      "avg_trade_duration": 0.0
+    },
+    "timestamp": "2025-08-13T12:22:03.068373",
+    "trading_mode": "SPOT",
+    "start_date": "2025-08-06",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "RSI_ETHUSDT_1755058917",
+    "strategy_type": "RSI",
+    "symbol": "ETHUSDT",
+    "params": {
+      "rsi_period": 12,
+      "overbought": 77,
+      "oversold": 24,
+      "position_size": 0.5,
+      "stop_loss": 0.05,
+      "take_profit": 0.05
+    },
+    "metrics": {
+      "total_return": 0.0,
+      "sharpe_ratio": 0.0,
+      "max_drawdown": 0.0,
+      "win_rate": 0.0,
+      "profit_factor": 0.0,
+      "total_trades": 0,
+      "avg_trade_duration": 0.0
+    },
+    "timestamp": "2025-08-13T12:21:58.019886",
+    "trading_mode": "SPOT",
+    "start_date": "2025-08-06",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "MA_ETHUSDT_1755058912",
+    "strategy_type": "MA",
+    "symbol": "ETHUSDT",
+    "params": {
+      "short_window": 16,
+      "long_window": 65,
+      "position_size": 5.0,
+      "stop_loss": 0.02,
+      "take_profit": 0.1
+    },
+    "metrics": {
+      "total_return": 0.0,
+      "sharpe_ratio": 0.0,
+      "max_drawdown": 0.0,
+      "win_rate": 0.0,
+      "profit_factor": 0.0,
+      "total_trades": 0,
+      "avg_trade_duration": 0.0
+    },
+    "timestamp": "2025-08-13T12:21:52.972046",
+    "trading_mode": "SPOT",
+    "start_date": "2025-08-06",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "Chanlun_ETHUSDT_1755058907",
+    "strategy_type": "Chanlun",
+    "symbol": "ETHUSDT",
+    "params": {
+      "min_swing_length": 5,
+      "trend_confirmation": 0.02,
+      "position_size": 1.0,
+      "stop_loss": 0.01,
+      "take_profit": 0.03
+    },
+    "metrics": {
+      "total_return": 0.0,
+      "sharpe_ratio": 0.0,
+      "max_drawdown": 0.0,
+      "win_rate": 0.0,
+      "profit_factor": 0.0,
+      "total_trades": 0,
+      "avg_trade_duration": 0.0
+    },
+    "timestamp": "2025-08-13T12:21:47.924030",
+    "trading_mode": "SPOT",
+    "start_date": "2025-08-06",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "ML_ETHUSDT_1755058902",
+    "strategy_type": "ML",
+    "symbol": "ETHUSDT",
+    "params": {
+      "lookback_period": 38,
+      "prediction_horizon": 1,
+      "model_type": "random_forest",
+      "position_size": 2.0,
+      "stop_loss": 0.05,
+      "take_profit": 0.02
+    },
+    "metrics": {
+      "total_return": 0.0,
+      "sharpe_ratio": 0.0,
+      "max_drawdown": 0.0,
+      "win_rate": 0.0,
+      "profit_factor": 0.0,
+      "total_trades": 0,
+      "avg_trade_duration": 0.0
+    },
+    "timestamp": "2025-08-13T12:21:42.873916",
+    "trading_mode": "SPOT",
+    "start_date": "2025-08-06",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "RSI_ETHUSDT_1755058897",
+    "strategy_type": "RSI",
+    "symbol": "ETHUSDT",
+    "params": {
+      "rsi_period": 17,
+      "overbought": 78,
+      "oversold": 26,
+      "position_size": 0.1,
+      "stop_loss": 0.05,
+      "take_profit": 0.1
+    },
+    "metrics": {
+      "total_return": 0.0,
+      "sharpe_ratio": 0.0,
+      "max_drawdown": 0.0,
+      "win_rate": 0.0,
+      "profit_factor": 0.0,
+      "total_trades": 0,
+      "avg_trade_duration": 0.0
+    },
+    "timestamp": "2025-08-13T12:21:37.827203",
+    "trading_mode": "SPOT",
+    "start_date": "2025-08-06",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "MA_ETHUSDT_1755058892",
+    "strategy_type": "MA",
+    "symbol": "ETHUSDT",
+    "params": {
+      "short_window": 8,
+      "long_window": 34,
+      "position_size": 2.0,
+      "stop_loss": 0.01,
+      "take_profit": 0.08
+    },
+    "metrics": {
+      "total_return": 0.0,
+      "sharpe_ratio": 0.0,
+      "max_drawdown": 0.0,
+      "win_rate": 0.0,
+      "profit_factor": 0.0,
+      "total_trades": 0,
+      "avg_trade_duration": 0.0
+    },
+    "timestamp": "2025-08-13T12:21:32.775024",
+    "trading_mode": "SPOT",
+    "start_date": "2025-08-06",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "RSI_ETHUSDT_1755058805",
+    "strategy_type": "RSI",
+    "symbol": "ETHUSDT",
+    "params": {
+      "rsi_period": 9,
+      "overbought": 80,
+      "oversold": 29,
+      "position_size": 5.0,
+      "stop_loss": 0.05,
+      "take_profit": 0.02
+    },
+    "metrics": {
+      "total_return": 0.0,
+      "sharpe_ratio": 0.0,
+      "max_drawdown": 0.0,
+      "win_rate": 0.0,
+      "profit_factor": 0.0,
+      "total_trades": 0,
+      "avg_trade_duration": 0.0
+    },
+    "timestamp": "2025-08-13T12:20:05.920868",
+    "trading_mode": "SPOT",
+    "start_date": "2024-06-01",
+    "end_date": "2024-12-31"
+  },
+  {
+    "test_id": "MA_ETHUSDT_1755058800",
+    "strategy_type": "MA",
+    "symbol": "ETHUSDT",
+    "params": {
+      "short_window": 9,
+      "long_window": 72,
+      "position_size": 0.1,
+      "stop_loss": 0.02,
+      "take_profit": 0.02
+    },
+    "metrics": {
+      "total_return": 0.0,
+      "sharpe_ratio": 0.0,
+      "max_drawdown": 0.0,
+      "win_rate": 0.0,
+      "profit_factor": 0.0,
+      "total_trades": 0,
+      "avg_trade_duration": 0.0
+    },
+    "timestamp": "2025-08-13T12:20:00.873959",
+    "trading_mode": "SPOT",
+    "start_date": "2024-06-01",
+    "end_date": "2024-12-31"
+  },
+  {
+    "test_id": "RSI_ETHUSDT_1755058728",
+    "strategy_type": "RSI",
+    "symbol": "ETHUSDT",
+    "params": {
+      "rsi_period": 19,
+      "overbought": 74,
+      "oversold": 33,
+      "position_size": 1.0,
+      "stop_loss": 0.03,
+      "take_profit": 0.02
+    },
+    "metrics": {
+      "total_return": 0.0,
+      "sharpe_ratio": 0.0,
+      "max_drawdown": 0.0,
+      "win_rate": 0.0,
+      "profit_factor": 0.0,
+      "total_trades": 0,
+      "avg_trade_duration": 0.0
+    },
+    "timestamp": "2025-08-13T12:18:48.462622",
+    "trading_mode": "SPOT",
+    "start_date": "2024-06-01",
+    "end_date": "2024-12-31"
+  },
+  {
+    "test_id": "MA_ETHUSDT_1755058723",
+    "strategy_type": "MA",
+    "symbol": "ETHUSDT",
+    "params": {
+      "short_window": 14,
+      "long_window": 63,
+      "position_size": 0.5,
+      "stop_loss": 0.02,
+      "take_profit": 0.1
+    },
+    "metrics": {
+      "total_return": 0.0,
+      "sharpe_ratio": 0.0,
+      "max_drawdown": 0.0,
+      "win_rate": 0.0,
+      "profit_factor": 0.0,
+      "total_trades": 0,
+      "avg_trade_duration": 0.0
+    },
+    "timestamp": "2025-08-13T12:18:43.409332",
+    "trading_mode": "SPOT",
+    "start_date": "2024-06-01",
+    "end_date": "2024-12-31"
+  },
+  {
+    "test_id": "Chanlun_ETHUSDT_1755058718",
+    "strategy_type": "Chanlun",
+    "symbol": "ETHUSDT",
+    "params": {
+      "min_swing_length": 6,
+      "trend_confirmation": 0.02,
+      "position_size": 2.0,
+      "stop_loss": 0.02,
+      "take_profit": 0.02
+    },
+    "metrics": {
+      "total_return": 0.0,
+      "sharpe_ratio": 0.0,
+      "max_drawdown": 0.0,
+      "win_rate": 0.0,
+      "profit_factor": 0.0,
+      "total_trades": 0,
+      "avg_trade_duration": 0.0
+    },
+    "timestamp": "2025-08-13T12:18:38.355511",
+    "trading_mode": "SPOT",
+    "start_date": "2024-06-01",
+    "end_date": "2024-12-31"
+  },
+  {
+    "test_id": "ML_ETHUSDT_1755058713",
+    "strategy_type": "ML",
+    "symbol": "ETHUSDT",
+    "params": {
+      "lookback_period": 17,
+      "prediction_horizon": 5,
+      "model_type": "gradient_boosting",
+      "position_size": 2.0,
+      "stop_loss": 0.01,
+      "take_profit": 0.1
+    },
+    "metrics": {
+      "total_return": 0.0,
+      "sharpe_ratio": 0.0,
+      "max_drawdown": 0.0,
+      "win_rate": 0.0,
+      "profit_factor": 0.0,
+      "total_trades": 0,
+      "avg_trade_duration": 0.0
+    },
+    "timestamp": "2025-08-13T12:18:33.303925",
+    "trading_mode": "SPOT",
+    "start_date": "2024-06-01",
+    "end_date": "2024-12-31"
+  },
+  {
+    "test_id": "RSI_ETHUSDT_1755058708",
+    "strategy_type": "RSI",
+    "symbol": "ETHUSDT",
+    "params": {
+      "rsi_period": 17,
+      "overbought": 70,
+      "oversold": 29,
+      "position_size": 1.0,
+      "stop_loss": 0.03,
+      "take_profit": 0.1
+    },
+    "metrics": {
+      "total_return": 0.0,
+      "sharpe_ratio": 0.0,
+      "max_drawdown": 0.0,
+      "win_rate": 0.0,
+      "profit_factor": 0.0,
+      "total_trades": 0,
+      "avg_trade_duration": 0.0
+    },
+    "timestamp": "2025-08-13T12:18:28.247649",
+    "trading_mode": "SPOT",
+    "start_date": "2024-06-01",
+    "end_date": "2024-12-31"
+  },
+  {
+    "test_id": "MA_ETHUSDT_1755058703",
+    "strategy_type": "MA",
+    "symbol": "ETHUSDT",
+    "params": {
+      "short_window": 11,
+      "long_window": 60,
+      "position_size": 0.5,
+      "stop_loss": 0.03,
+      "take_profit": 0.03
+    },
+    "metrics": {
+      "total_return": 0.0,
+      "sharpe_ratio": 0.0,
+      "max_drawdown": 0.0,
+      "win_rate": 0.0,
+      "profit_factor": 0.0,
+      "total_trades": 0,
+      "avg_trade_duration": 0.0
+    },
+    "timestamp": "2025-08-13T12:18:23.199346",
+    "trading_mode": "SPOT",
+    "start_date": "2024-06-01",
+    "end_date": "2024-12-31"
   }
 ]
