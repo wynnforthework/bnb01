@@ -1,4 +1,44 @@
 {
+  "RSI": {
+    "ETHUSDT": {
+      "parameters": {
+        "rsi_period": 9,
+        "overbought": 69,
+        "oversold": 26,
+        "position_size": 5.0,
+        "stop_loss": 0.02,
+        "take_profit": 0.1
+      },
+      "performance": {
+        "total_return": 235076.63232568826,
+        "sharpe_ratio": 2.666857705626947,
+        "win_rate": 98.10606060606061,
+        "max_drawdown": -508.9661196819462,
+        "profit_factor": 8670.072296117794,
+        "total_trades": 264,
+        "avg_trade_duration": 1.0
+      }
+    },
+    "ADAUSDT": {
+      "parameters": {
+        "rsi_period": 7,
+        "overbought": 77,
+        "oversold": 22,
+        "position_size": 5.0,
+        "stop_loss": 0.05,
+        "take_profit": 0.1
+      },
+      "performance": {
+        "total_return": 108693.09509959453,
+        "sharpe_ratio": 3.098968432597988,
+        "win_rate": 99.23664122137404,
+        "max_drawdown": -501.0288207297726,
+        "profit_factor": 999.99,
+        "total_trades": 131,
+        "avg_trade_duration": 1.0
+      }
+    }
+  },
   "ML": {
     "ADAUSDT": {
       "parameters": {
@@ -39,43 +79,41 @@
       }
     }
   },
-  "RSI": {
+  "Chanlun": {
     "ADAUSDT": {
       "parameters": {
-        "rsi_period": 7,
-        "overbought": 77,
-        "oversold": 22,
+        "min_swing_length": 7,
+        "trend_confirmation": 0.01,
         "position_size": 5.0,
-        "stop_loss": 0.05,
-        "take_profit": 0.1
+        "stop_loss": 0.01,
+        "take_profit": 0.03
       },
       "performance": {
-        "total_return": 108693.09509959453,
-        "sharpe_ratio": 3.098968432597988,
-        "win_rate": 99.23664122137404,
-        "max_drawdown": -501.0288207297726,
-        "profit_factor": 999.99,
-        "total_trades": 131,
+        "total_return": 117083.05919770287,
+        "sharpe_ratio": 5.386477240997797,
+        "win_rate": 96.49484536082474,
+        "max_drawdown": -152.05567351200833,
+        "profit_factor": 2230.103987179485,
+        "total_trades": 485,
         "avg_trade_duration": 1.0
       }
     },
     "ETHUSDT": {
       "parameters": {
-        "rsi_period": 9,
-        "overbought": 69,
-        "oversold": 26,
-        "position_size": 5.0,
-        "stop_loss": 0.02,
-        "take_profit": 0.1
+        "min_swing_length": 5,
+        "trend_confirmation": 0.02,
+        "position_size": 1.0,
+        "stop_loss": 0.01,
+        "take_profit": 0.03
       },
       "performance": {
-        "total_return": 235076.63232568826,
-        "sharpe_ratio": 2.666857705626947,
-        "win_rate": 98.10606060606061,
-        "max_drawdown": -508.9661196819462,
-        "profit_factor": 8670.072296117794,
-        "total_trades": 264,
-        "avg_trade_duration": 1.0
+        "total_return": 0.0,
+        "sharpe_ratio": 0.0,
+        "win_rate": 0.0,
+        "max_drawdown": 0.0,
+        "profit_factor": 0.0,
+        "total_trades": 0,
+        "avg_trade_duration": 0.0
       }
     }
   },
@@ -114,44 +152,6 @@
         "profit_factor": 999.99,
         "total_trades": 14,
         "avg_trade_duration": 1.0
-      }
-    }
-  },
-  "Chanlun": {
-    "ADAUSDT": {
-      "parameters": {
-        "min_swing_length": 7,
-        "trend_confirmation": 0.01,
-        "position_size": 5.0,
-        "stop_loss": 0.01,
-        "take_profit": 0.03
-      },
-      "performance": {
-        "total_return": 117083.05919770287,
-        "sharpe_ratio": 5.386477240997797,
-        "win_rate": 96.49484536082474,
-        "max_drawdown": -152.05567351200833,
-        "profit_factor": 2230.103987179485,
-        "total_trades": 485,
-        "avg_trade_duration": 1.0
-      }
-    },
-    "ETHUSDT": {
-      "parameters": {
-        "min_swing_length": 5,
-        "trend_confirmation": 0.02,
-        "position_size": 1.0,
-        "stop_loss": 0.01,
-        "take_profit": 0.03
-      },
-      "performance": {
-        "total_return": 0.0,
-        "sharpe_ratio": 0.0,
-        "win_rate": 0.0,
-        "max_drawdown": 0.0,
-        "profit_factor": 0.0,
-        "total_trades": 0,
-        "avg_trade_duration": 0.0
       }
     }
   }
