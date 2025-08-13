@@ -1,6 +1,5 @@
 // 现货交易页面JavaScript
 let socket;
-let currentSymbol = 'BTCUSDT';
 
 // 初始化应用
 document.addEventListener('DOMContentLoaded', function () {
@@ -11,10 +10,22 @@ document.addEventListener('DOMContentLoaded', function () {
     checkTradingStatus();
     
     // 延迟初始化币种管理，确保页面完全加载
-setTimeout(async () => {
-    console.log('🔄 开始初始化币种管理...');
-    await initializeSymbolManagement();
-}, 500);
+    setTimeout(async () => {
+        console.log('🔄 开始初始化币种管理...');
+        await initializeSymbolManagement();
+    }, 500);
+    
+    // 延迟加载合约数据，确保futures.js已加载
+    setTimeout(() => {
+        console.log('🔄 开始加载合约数据...');
+        if (typeof loadFuturesInitialData === 'function') {
+            loadFuturesInitialData();
+        } else {
+            console.log('⚠️ loadFuturesInitialData 函数未找到，尝试直接调用合约数据加载函数');
+            // 如果futures.js函数不可用，尝试直接调用API
+            loadFuturesDataDirectly();
+        }
+    }, 1500);
 });
 
 // 初始化WebSocket连接
@@ -59,15 +70,6 @@ function bindEvents() {
     if (refreshBtn) {
         refreshBtn.addEventListener('click', function () {
             loadInitialData();
-        });
-    }
-
-    // 交易对选择
-    const symbolSelect = document.getElementById('symbol-select');
-    if (symbolSelect) {
-        symbolSelect.addEventListener('change', function () {
-            currentSymbol = this.value;
-            loadMarketData(currentSymbol);
         });
     }
 
@@ -145,9 +147,7 @@ function loadInitialData() {
     loadAccountData();
     loadPortfolioData();
     loadTradesData();
-    loadMarketData(currentSymbol);
     loadRiskMetrics();
-    loadSystemStatus();
     loadStrategiesList();
     loadStrategiesStatus();
     checkTradingStatus();
@@ -349,21 +349,6 @@ function displayTradesData(trades) {
     tbody.innerHTML = html;
 }
 
-// 加载市场数据
-async function loadMarketData(symbol) {
-    try {
-        const response = await fetch(`/api/market/${symbol}`);
-        const data = await response.json();
-
-        if (data.success && data.data.length > 0) {
-            displayMarketChart(data.data, symbol);
-        } else {
-            console.error('加载市场数据失败:', data.message);
-        }
-    } catch (error) {
-        console.error('加载市场数据失败:', error.message);
-    }
-}
 
 // 更新市场数据币种选择下拉框
 function updateMarketDataSymbolSelect() {
@@ -385,7 +370,6 @@ function updateMarketDataSymbolSelect() {
         // 设置默认选择第一个
         if (availableSymbols.length > 0) {
             symbolSelect.value = availableSymbols[0];
-            currentSymbol = availableSymbols[0];
         }
     } else {
         // 如果没有启用的币种，显示默认选项
@@ -432,35 +416,6 @@ function updateDataCollectionSymbolSelect() {
     }
 }
 
-// 显示市场图表
-function displayMarketChart(marketData, symbol) {
-    const chartContainer = document.getElementById('price-chart');
-    if (!chartContainer) return;
-
-    try {
-        const traces = [{
-            x: marketData.map(d => new Date(d.timestamp)),
-            close: marketData.map(d => d.close),
-            high: marketData.map(d => d.high),
-            low: marketData.map(d => d.low),
-            open: marketData.map(d => d.open),
-            type: 'candlestick',
-            name: symbol
-        }];
-
-        const layout = {
-            title: `${symbol} 现货价格`,
-            xaxis: { title: '时间' },
-            yaxis: { title: '价格 (USDT)' },
-            height: 400
-        };
-
-        Plotly.newPlot('price-chart', traces, layout);
-    } catch (error) {
-        console.error('显示图表失败:', error);
-        chartContainer.innerHTML = '<p class="text-center text-muted">图表加载失败</p>';
-    }
-}
 
 // 启动现货交易
 async function startSpotTrading() {
@@ -704,66 +659,6 @@ function displayRiskMetrics(riskData) {
     container.innerHTML = html;
 }
 
-// 加载系统状态
-async function loadSystemStatus() {
-    const container = document.getElementById('system-status');
-    if (!container) return;
-
-    try {
-        const response = await fetch('/api/system/status');
-        const data = await response.json();
-
-        if (data.success) {
-            displaySystemStatus(data.data);
-        } else {
-            container.innerHTML = '<p class="text-muted">暂无系统状态</p>';
-        }
-    } catch (error) {
-        console.error('加载系统状态失败:', error);
-        container.innerHTML = '<p class="text-muted">加载系统状态失败</p>';
-    }
-}
-
-// 显示系统状态
-function displaySystemStatus(statusData) {
-    const container = document.getElementById('system-status');
-    if (!container) return;
-
-    const html = `
-        <div class="columns">
-            <div class="column is-6">
-                <div class="is-flex is-justify-content-space-between">
-                    <span>API连接</span>
-                    <span class="tag ${statusData.api_connected ? 'is-success' : 'is-danger'}">
-                        ${statusData.api_connected ? '正常' : '断开'}
-                    </span>
-                </div>
-            </div>
-            <div class="column is-6">
-                <div class="is-flex is-justify-content-space-between">
-                    <span>数据库</span>
-                    <span class="tag ${statusData.database_connected ? 'is-success' : 'is-danger'}">
-                        ${statusData.database_connected ? '正常' : '异常'}
-                    </span>
-                </div>
-            </div>
-            <div class="column is-6 mt-2">
-                <div class="is-flex is-justify-content-space-between">
-                    <span>内存使用</span>
-                    <span class="tag is-info">${(statusData.memory_usage || 0).toFixed(1)}%</span>
-                </div>
-            </div>
-            <div class="column is-6 mt-2">
-                <div class="is-flex is-justify-content-space-between">
-                    <span>运行时间</span>
-                    <span class="tag is-light">${statusData.uptime || '0h'}</span>
-                </div>
-            </div>
-        </div>
-    `;
-
-    container.innerHTML = html;
-}
 
 // 加载策略列表
 async function loadStrategiesList() {
@@ -2207,5 +2102,109 @@ function showStrategyPanel(panelType) {
         document.getElementById('show-backtest').classList.remove('btn-outline-success');
         document.getElementById('show-backtest').classList.add('btn-success');
     }
+}
+
+// 直接加载合约数据的备用函数
+async function loadFuturesDataDirectly() {
+    console.log('🔄 直接加载合约数据...');
+    
+    try {
+        // 加载合约持仓
+        const positionsResponse = await fetch('/api/futures/positions');
+        const positionsData = await positionsResponse.json();
+        
+        if (positionsData.success) {
+            displayFuturesPositionsDirectly(positionsData.positions);
+        } else {
+            console.error('加载合约持仓失败:', positionsData.message);
+        }
+        
+        // 加载合约交易历史
+        const tradesResponse = await fetch('/api/futures/trades');
+        const tradesData = await tradesResponse.json();
+        
+        if (tradesData.success) {
+            displayFuturesTradesDirectly(tradesData.trades);
+        } else {
+            console.error('加载合约交易历史失败:', tradesData.message);
+        }
+        
+    } catch (error) {
+        console.error('直接加载合约数据失败:', error.message);
+    }
+}
+
+// 直接显示合约持仓
+function displayFuturesPositionsDirectly(positions) {
+    const tbody = document.querySelector('#futures-positions-table tbody');
+    if (!tbody) {
+        console.error('未找到合约持仓表格');
+        return;
+    }
+    
+    if (positions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="has-text-centered">暂无合约持仓</td></tr>';
+        return;
+    }
+    
+    let html = '';
+    positions.forEach(position => {
+        const pnlClass = position.unRealizedProfit >= 0 ? 'has-text-success' : 'has-text-danger';
+        const pnlSign = position.unRealizedProfit >= 0 ? '+' : '';
+        const sideClass = position.positionAmt > 0 ? 'has-text-success' : 'has-text-danger';
+        const sideText = position.positionAmt > 0 ? '做多' : '做空';
+        
+        html += `
+            <tr>
+                <td>${position.symbol}</td>
+                <td class="${sideClass}">${sideText}</td>
+                <td>${Math.abs(position.positionAmt).toFixed(6)}</td>
+                <td>$${position.entryPrice.toFixed(2)}</td>
+                <td>$${position.markPrice.toFixed(2)}</td>
+                <td class="${pnlClass}">${pnlSign}$${position.unRealizedProfit.toFixed(2)}</td>
+                <td class="${pnlClass}">${pnlSign}${(position.percentage || 0).toFixed(2)}%</td>
+                <td>$${position.isolatedMargin.toFixed(2)}</td>
+                <td>${position.leverage}x</td>
+            </tr>
+        `;
+    });
+    
+    tbody.innerHTML = html;
+}
+
+// 直接显示合约交易历史
+function displayFuturesTradesDirectly(trades) {
+    const tbody = document.querySelector('#futures-trades-table tbody');
+    if (!tbody) {
+        console.error('未找到合约交易历史表格');
+        return;
+    }
+    
+    if (trades.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="has-text-centered">暂无合约交易记录</td></tr>';
+        return;
+    }
+    
+    let html = '';
+    trades.forEach(trade => {
+        const sideClass = trade.side === 'BUY' ? 'has-text-success' : 'has-text-danger';
+        const pnlClass = trade.profit_loss >= 0 ? 'has-text-success' : 'has-text-danger';
+        const pnlSign = trade.profit_loss >= 0 ? '+' : '';
+        
+        html += `
+            <tr>
+                <td>${new Date(trade.timestamp).toLocaleString()}</td>
+                <td>${trade.symbol}</td>
+                <td class="${sideClass}">${trade.side}</td>
+                <td>${trade.quantity.toFixed(6)}</td>
+                <td>$${trade.price.toFixed(2)}</td>
+                <td>${trade.strategy || 'N/A'}</td>
+                <td class="${pnlClass}">${pnlSign}$${trade.profit_loss.toFixed(2)}</td>
+                <td><span class="tag is-warning">合约</span></td>
+            </tr>
+        `;
+    });
+    
+    tbody.innerHTML = html;
 }
 

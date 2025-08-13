@@ -170,9 +170,7 @@ backtest_engine = BacktestEngine()
 def index():
     return render_template('index.html')
 
-@app.route('/futures')
-def futures():
-    return render_template('futures.html')
+
 
 @app.route('/test-symbols')
 def test_symbols():
