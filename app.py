@@ -25,19 +25,95 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 trading_engine = None
 futures_trading_engine = None
 
+# 配置文件名
+SPOT_CONFIG_FILE = 'spot_config.json'
+FUTURES_CONFIG_FILE = 'futures_config.json'
+
+def load_spot_config():
+    """从文件加载现货交易配置"""
+    try:
+        with open(SPOT_CONFIG_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        # 如果文件不存在，返回默认配置
+        return {
+            'symbols': [
+                'BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT', 'DOGEUSDT', 'SOLUSDT', 
+                'DOTUSDT', 'AVAXUSDT', 'LINKUSDT', 'UNIUSDT', 'LTCUSDT', 'ATOMUSDT', 
+                'FILUSDT', 'XRPUSDT', 'MATICUSDT', 'SHIBUSDT', 'TRXUSDT', 'XLMUSDT',
+                'BCHUSDT', 'ETCUSDT', 'NEARUSDT', 'FTMUSDT', 'ALGOUSDT', 'VETUSDT',
+                'ICPUSDT', 'THETAUSDT', 'XMRUSDT', 'EOSUSDT', 'AAVEUSDT', 'SUSHIUSDT'
+            ],
+            'strategy_types': ['MA', 'RSI', 'ML', 'Chanlun'],
+            'enabled_strategies': {},
+            'trading_status': 'stopped'
+        }
+    except Exception as e:
+        print(f"加载现货配置失败: {e}")
+        return None
+
+def save_spot_config(config):
+    """保存现货交易配置到文件"""
+    try:
+        with open(SPOT_CONFIG_FILE, 'w', encoding='utf-8') as f:
+            json.dump(config, f, ensure_ascii=False, indent=2)
+        print(f"现货配置已保存到 {SPOT_CONFIG_FILE}")
+    except Exception as e:
+        print(f"保存现货配置失败: {e}")
+
+def load_futures_config():
+    """从文件加载合约交易配置"""
+    try:
+        with open(FUTURES_CONFIG_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        # 如果文件不存在，返回默认配置
+        return {
+            'leverage': 10,
+            'symbols': ['BTCUSDT', 'ETHUSDT'],
+            'enabled_strategies': {},
+            'updated_at': datetime.now().isoformat()
+        }
+    except Exception as e:
+        print(f"加载合约配置失败: {e}")
+        return None
+
+def save_futures_config(config):
+    """保存合约交易配置到文件"""
+    try:
+        with open(FUTURES_CONFIG_FILE, 'w', encoding='utf-8') as f:
+            json.dump(config, f, ensure_ascii=False, indent=2)
+        print(f"合约配置已保存到 {FUTURES_CONFIG_FILE}")
+    except Exception as e:
+        print(f"保存合约配置失败: {e}")
+
 # 现货交易配置
-spot_config = {
-    'symbols': [
-        'BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT', 'DOGEUSDT', 'SOLUSDT', 
-        'DOTUSDT', 'AVAXUSDT', 'LINKUSDT', 'UNIUSDT', 'LTCUSDT', 'ATOMUSDT', 
-        'FILUSDT', 'XRPUSDT', 'MATICUSDT', 'SHIBUSDT', 'TRXUSDT', 'XLMUSDT',
-        'BCHUSDT', 'ETCUSDT', 'NEARUSDT', 'FTMUSDT', 'ALGOUSDT', 'VETUSDT',
-        'ICPUSDT', 'THETAUSDT', 'XMRUSDT', 'EOSUSDT', 'AAVEUSDT', 'SUSHIUSDT'
-    ],
-    'strategy_types': ['MA', 'RSI', 'ML', 'Chanlun'],
-    'enabled_strategies': {},
-    'trading_status': 'stopped'
-}
+spot_config = load_spot_config()
+if spot_config is None:
+    # 如果加载失败，使用默认配置
+    spot_config = {
+        'symbols': [
+            'BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT', 'DOGEUSDT', 'SOLUSDT', 
+            'DOTUSDT', 'AVAXUSDT', 'LINKUSDT', 'UNIUSDT', 'LTCUSDT', 'ATOMUSDT', 
+            'FILUSDT', 'XRPUSDT', 'MATICUSDT', 'SHIBUSDT', 'TRXUSDT', 'XLMUSDT',
+            'BCHUSDT', 'ETCUSDT', 'NEARUSDT', 'FTMUSDT', 'ALGOUSDT', 'VETUSDT',
+            'ICPUSDT', 'THETAUSDT', 'XMRUSDT', 'EOSUSDT', 'AAVEUSDT', 'SUSHIUSDT'
+        ],
+        'strategy_types': ['MA', 'RSI', 'ML', 'Chanlun'],
+        'enabled_strategies': {},
+        'trading_status': 'stopped'
+    }
+
+# 合约交易配置
+futures_config = load_futures_config()
+if futures_config is None:
+    # 如果加载失败，使用默认配置
+    futures_config = {
+        'leverage': 10,
+        'symbols': ['BTCUSDT', 'ETHUSDT'],
+        'enabled_strategies': {},
+        'updated_at': datetime.now().isoformat()
+    }
 
 # 用户状态存储
 user_state = {
@@ -54,8 +130,9 @@ def initialize_spot_engine():
     if trading_engine is None:
         try:
             print("初始化现货交易引擎...")
-            trading_engine = TradingEngine(trading_mode='SPOT')
-            print(f"现货交易引擎初始化成功，策略数量: {len(trading_engine.strategies)}")
+            # 初始化时不创建策略，等用户选择后再创建
+            trading_engine = TradingEngine(trading_mode='SPOT', selected_symbols=[], enabled_strategies=[])
+            print(f"现货交易引擎初始化成功")
         except Exception as e:
             print(f"初始化现货交易引擎失败: {e}")
 
@@ -66,8 +143,9 @@ def initialize_futures_engine():
     if futures_trading_engine is None:
         try:
             print("初始化合约交易引擎...")
-            futures_trading_engine = TradingEngine(trading_mode='FUTURES', leverage=10)
-            print(f"合约交易引擎初始化成功，策略数量: {len(futures_trading_engine.strategies)}")
+            # 初始化时不创建策略，等用户选择后再创建
+            futures_trading_engine = TradingEngine(trading_mode='FUTURES', leverage=10, selected_symbols=[], enabled_strategies=[])
+            print(f"合约交易引擎初始化成功")
         except Exception as e:
             print(f"初始化合约交易引擎失败: {e}")
 
@@ -560,6 +638,9 @@ def update_spot_symbols():
             if symbol not in symbols:
                 del spot_config['enabled_strategies'][strategy_key]
         
+        # 保存配置到文件
+        save_spot_config(spot_config)
+        
         return jsonify({
             'success': True,
             'message': f'币种列表已更新，共 {len(symbols)} 个币种',
@@ -624,6 +705,9 @@ def update_spot_strategies():
         
         # 计算启用的策略数量
         enabled_count = len([k for k, v in spot_config['enabled_strategies'].items() if v])
+        
+        # 保存配置到文件
+        save_spot_config(spot_config)
         
         print(f"策略更新完成，总策略数量: {total_strategies}, 启用策略数量: {enabled_count}")
         
@@ -817,6 +901,9 @@ def manage_spot_strategies():
             enabled_count = len([k for k, v in spot_config['enabled_strategies'].items() if v])
             total_count = len(spot_config['symbols']) * len(spot_config['strategy_types'])
             
+            # 保存配置到文件
+            save_spot_config(spot_config)
+            
             print(f"已启用全部策略，启用数量: {enabled_count}, 总数量: {total_count}")
             return jsonify({
                 'success': True, 
@@ -835,6 +922,9 @@ def manage_spot_strategies():
             enabled_count = len([k for k, v in spot_config['enabled_strategies'].items() if v])
             total_count = len(spot_config['symbols']) * len(spot_config['strategy_types'])
             
+            # 保存配置到文件
+            save_spot_config(spot_config)
+            
             print(f"已禁用全部策略，启用数量: {enabled_count}, 总数量: {total_count}")
             return jsonify({
                 'success': True, 
@@ -852,6 +942,9 @@ def manage_spot_strategies():
                 
                 enabled_count = len([k for k, v in spot_config['enabled_strategies'].items() if v])
                 total_count = len(spot_config['symbols']) * len(spot_config['strategy_types'])
+                
+                # 保存配置到文件
+                save_spot_config(spot_config)
                 
                 print(f"策略 {strategy_key} 已{status}，启用数量: {enabled_count}, 总数量: {total_count}")
                 return jsonify({
@@ -944,6 +1037,7 @@ def save_user_state():
 @app.route('/api/spot/trading/start', methods=['POST'])
 def start_spot_trading():
     """启动现货交易"""
+    global trading_engine
     try:
         # 获取启用的策略
         enabled_strategies = [k for k, v in spot_config['enabled_strategies'].items() if v]
@@ -951,20 +1045,52 @@ def start_spot_trading():
         if not enabled_strategies:
             return jsonify({'success': False, 'message': '请先启用至少一个策略'})
         
+        # 提取策略类型（去掉币种前缀）
+        strategy_types = []
+        for strategy_key in enabled_strategies:
+            if '_' in strategy_key:
+                strategy_type = strategy_key.split('_')[1]  # 格式: BTCUSDT_MA -> MA
+                if strategy_type not in strategy_types:
+                    strategy_types.append(strategy_type)
+        
+        # 获取用户选择的币种
+        selected_symbols = spot_config['symbols']
+        
+        # 重新初始化交易引擎，只使用用户选择的币种和策略
+        if trading_engine:
+            trading_engine.stop_trading()
+        
+        trading_engine = TradingEngine(
+            trading_mode='SPOT',
+            selected_symbols=selected_symbols,
+            enabled_strategies=strategy_types
+        )
+        
+        # 启动交易
+        if not trading_engine.is_running:
+            trading_thread = threading.Thread(target=trading_engine.start_trading)
+            trading_thread.daemon = True
+            trading_thread.start()
+        
         # 更新交易状态
         spot_config['trading_status'] = 'running'
         
+        # 保存配置到文件
+        save_spot_config(spot_config)
+        
         # 记录启动信息
-        print(f"现货交易已启动，启用策略: {enabled_strategies}")
-        print(f"启用策略数量: {len(enabled_strategies)}")
-        print(f"总策略数量: {len(spot_config['symbols']) * len(spot_config['strategy_types'])}")
+        print(f"现货交易已启动，币种: {selected_symbols}")
+        print(f"启用策略类型: {strategy_types}")
+        print(f"策略数量: {len(trading_engine.strategies)}")
         
         return jsonify({
             'success': True,
-            'message': f'现货交易已启动，启用 {len(enabled_strategies)} 个策略',
+            'message': f'现货交易已启动，币种: {len(selected_symbols)}个，策略: {", ".join(strategy_types)}',
             'enabled_strategies': enabled_strategies,
             'enabled_count': len(enabled_strategies),
-            'total_count': len(spot_config['symbols']) * len(spot_config['strategy_types'])
+            'total_count': len(spot_config['symbols']) * len(spot_config['strategy_types']),
+            'selected_symbols': selected_symbols,
+            'strategy_types': strategy_types
         })
     except Exception as e:
         return jsonify({'success': False, 'message': f'启动交易失败: {str(e)}'})
@@ -974,6 +1100,10 @@ def stop_spot_trading():
     """停止现货交易"""
     try:
         spot_config['trading_status'] = 'stopped'
+        
+        # 保存配置到文件
+        save_spot_config(spot_config)
+        
         return jsonify({'success': True, 'message': '现货交易已停止'})
     except Exception as e:
         return jsonify({'success': False, 'message': f'停止交易失败: {str(e)}'})
@@ -1146,19 +1276,8 @@ def update_futures_config():
             'updated_at': datetime.now().isoformat()
         }
         
-        # 同时保存到文件以确保持久化
-        try:
-            import os
-            import json
-            config_dir = os.path.dirname(os.path.abspath(__file__))
-            config_file = os.path.join(config_dir, 'futures_config.json')
-            
-            with open(config_file, 'w', encoding='utf-8') as f:
-                json.dump(futures_config, f, ensure_ascii=False, indent=2)
-            
-            print(f"配置已保存到文件: {config_file}")
-        except Exception as file_error:
-            print(f"保存配置文件失败: {file_error}")
+        # 保存配置到文件
+        save_futures_config(futures_config)
         
         return jsonify({
             'success': True,
@@ -1173,32 +1292,6 @@ def get_futures_config():
     """获取合约交易配置"""
     try:
         global futures_config
-        
-        # 首先尝试从文件读取配置
-        try:
-            import os
-            import json
-            config_dir = os.path.dirname(os.path.abspath(__file__))
-            config_file = os.path.join(config_dir, 'futures_config.json')
-            
-            if os.path.exists(config_file):
-                with open(config_file, 'r', encoding='utf-8') as f:
-                    file_config = json.load(f)
-                    futures_config = file_config
-                    print(f"从文件加载配置: {config_file}")
-            else:
-                print("配置文件不存在，使用默认配置")
-        except Exception as file_error:
-            print(f"读取配置文件失败: {file_error}")
-        
-        # 如果全局变量不存在，使用默认配置
-        if 'futures_config' not in globals() or not futures_config:
-            futures_config = {
-                'leverage': 10,
-                'symbols': ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT'],
-                'updated_at': datetime.now().isoformat()
-            }
-            print("使用默认配置")
         
         return jsonify({
             'success': True,
@@ -1236,9 +1329,20 @@ def start_futures_trading():
             futures_config['symbols'] = symbols
             futures_config['enabled_strategies'] = enabled_strategies
             futures_config['leverage'] = leverage
+            
+            # 保存配置到文件
+            save_futures_config(futures_config)
         
-        if futures_trading_engine is None:
-            futures_trading_engine = TradingEngine(trading_mode='FUTURES', leverage=leverage)
+        # 重新初始化合约交易引擎，只使用用户选择的币种和策略
+        if futures_trading_engine:
+            futures_trading_engine.stop_trading()
+        
+        futures_trading_engine = TradingEngine(
+            trading_mode='FUTURES',
+            leverage=leverage,
+            selected_symbols=symbols,
+            enabled_strategies=enabled_strategies
+        )
         
         if not futures_trading_engine.is_running:
             trading_thread = threading.Thread(target=futures_trading_engine.start_trading)

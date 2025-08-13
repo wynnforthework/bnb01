@@ -17,17 +17,23 @@ from config.config import Config
 class TradingEngine:
     """增强版交易引擎 - 支持现货和合约交易"""
     
-    def __init__(self, trading_mode='SPOT', leverage=10):
+    def __init__(self, trading_mode='SPOT', leverage=10, selected_symbols=None, enabled_strategies=None):
         """
         初始化交易引擎
         
         Args:
             trading_mode: 'SPOT' 现货交易, 'FUTURES' 合约交易
             leverage: 合约交易杠杆倍数 (仅合约模式有效)
+            selected_symbols: 用户选择的币种列表，如果为None则使用默认配置
+            enabled_strategies: 启用的策略列表，如果为None则使用所有策略
         """
         self.config = Config()
         self.trading_mode = trading_mode.upper()
         self.leverage = leverage
+        
+        # 用户选择的币种和策略
+        self.selected_symbols = selected_symbols or self.config.DEFAULT_SYMBOLS
+        self.enabled_strategies = enabled_strategies or ['MA', 'RSI', 'ML', 'Chanlun']
         
         # 使用客户端管理器避免重复初始化
         from backend.client_manager import client_manager
@@ -42,6 +48,9 @@ class TradingEngine:
         self.logger = logging.getLogger(__name__)
         
         self.logger.info(f"交易引擎初始化完成，模式: {self.trading_mode}")
+        self.logger.info(f"选择的币种: {self.selected_symbols}")
+        self.logger.info(f"启用的策略: {self.enabled_strategies}")
+        
         if self.trading_mode == 'FUTURES':
             self.logger.info(f"合约杠杆: {self.leverage}x")
             # 初始化合约设置
@@ -59,10 +68,8 @@ class TradingEngine:
             # 设置持仓模式为双向持仓
             self.binance_client.set_position_mode(dual_side_position=True)
             
-            # 使用安全交易对列表
-            safe_symbols = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT']
-            
-            for symbol in safe_symbols:
+            # 只为用户选择的币种设置合约参数
+            for symbol in self.selected_symbols:
                 try:
                     # 设置保证金模式为逐仓（静默处理已设置的情况）
                     margin_result = self.binance_client.set_margin_type(symbol, 'ISOLATED')
@@ -143,16 +150,10 @@ class TradingEngine:
             return 0.001  # 默认最小数量
     
     def _initialize_strategies(self):
-        """初始化交易策略"""
-        # 验证并过滤有效的交易对
-        all_symbols = self.config.DEFAULT_SYMBOLS + [
-            'DOGEUSDT', 'SOLUSDT', 'DOTUSDT', 'AVAXUSDT', 
-            'LINKUSDT', 'UNIUSDT', 'LTCUSDT', 'ATOMUSDT', 'FILUSDT'
-        ]
-        
-        # 验证交易对有效性
+        """初始化交易策略 - 只为用户选择的币种创建策略"""
+        # 验证用户选择的交易对有效性
         valid_symbols = []
-        for symbol in all_symbols:
+        for symbol in self.selected_symbols:
             if self.binance_client._is_valid_symbol(symbol):
                 # 进一步验证是否能获取数据
                 try:
@@ -171,99 +172,83 @@ class TradingEngine:
             self.logger.error("没有找到有效的交易对，使用默认配置")
             valid_symbols = ['BTCUSDT', 'ETHUSDT']  # 最基本的交易对
         
-        # 为所有有效的交易对创建策略（现货模式）
-        if self.trading_mode == 'SPOT':
-            # 现货交易：为所有有效交易对创建策略
-            strategy_symbols = valid_symbols
-        else:
-            # 合约交易：只为主要交易对创建策略（避免资源消耗过大）
-            strategy_symbols = [s for s in self.config.DEFAULT_SYMBOLS if s in valid_symbols]
+        # 只为用户选择的币种创建策略
+        for symbol in valid_symbols:
+            # 根据启用的策略类型创建策略
+            if 'MA' in self.enabled_strategies:
+                # MA策略 - 使用更敏感的参数
+                ma_strategy = MovingAverageStrategy(
+                    symbol=symbol,
+                    parameters={
+                        'short_window': 5,   # 更短的窗口，更敏感
+                        'long_window': 15,   # 更短的窗口，更敏感
+                        'stop_loss': 0.02,
+                        'take_profit': 0.04, # 降低止盈目标
+                        'position_size': 0.03
+                    }
+                )
+                self.strategies[f"{symbol}_MA"] = ma_strategy
+            
+            if 'RSI' in self.enabled_strategies:
+                # RSI策略 - 使用更敏感的参数
+                rsi_strategy = RSIStrategy(
+                    symbol=symbol,
+                    parameters={
+                        'rsi_period': 10,    # 更短的周期，更敏感
+                        'oversold': 35,      # 提高超卖阈值，更容易触发买入
+                        'overbought': 65,    # 降低超买阈值，更容易触发卖出
+                        'stop_loss': 0.02,
+                        'take_profit': 0.04, # 降低止盈目标
+                        'position_size': 0.03
+                    }
+                )
+                self.strategies[f"{symbol}_RSI"] = rsi_strategy
+            
+            if 'ML' in self.enabled_strategies:
+                # 机器学习策略 - 使用更敏感的参数
+                ml_strategy = MLStrategy(
+                    symbol=symbol,
+                    parameters={
+                        'model_type': 'random_forest',
+                        'lookback_period': 15,   # 更短的回看期
+                        'prediction_horizon': 1,
+                        'min_confidence': 0.45,  # 进一步降低信心阈值
+                        'up_threshold': 0.005,   # 0.5% - 更敏感的阈值
+                        'down_threshold': -0.005, # -0.5% - 更敏感的阈值
+                        'stop_loss': 0.02,
+                        'take_profit': 0.04,     # 降低止盈目标
+                        'position_size': 0.03,
+                        'retrain_frequency': 30, # 更频繁重训练
+                        'min_training_samples': 80  # 降低最小训练样本
+                    }
+                )
+                self.strategies[f"{symbol}_ML"] = ml_strategy
+            
+            if 'Chanlun' in self.enabled_strategies:
+                # 缠论策略 - 基于缠论理论的量化交易策略
+                chanlun_strategy = ChanlunStrategy(
+                    symbol=symbol,
+                    parameters={
+                        'timeframes': ['30m', '1h', '4h'],
+                        'min_swing_length': 3,
+                        'central_bank_min_bars': 3,
+                        'macd_fast': 12,
+                        'macd_slow': 26,
+                        'macd_signal': 9,
+                        'rsi_period': 14,
+                        'ma_short': 5,
+                        'ma_long': 20,
+                        'position_size': 0.3,
+                        'max_position': 1.0,
+                        'stop_loss': 0.03,
+                        'take_profit': 0.05,
+                        'trend_confirmation': 0.02,
+                        'divergence_threshold': 0.1
+                    }
+                )
+                self.strategies[f"{symbol}_Chanlun"] = chanlun_strategy
         
-        for symbol in strategy_symbols:
-            # MA策略 - 使用更敏感的参数
-            ma_strategy = MovingAverageStrategy(
-                symbol=symbol,
-                parameters={
-                    'short_window': 5,   # 更短的窗口，更敏感
-                    'long_window': 15,   # 更短的窗口，更敏感
-                    'stop_loss': 0.02,
-                    'take_profit': 0.04, # 降低止盈目标
-                    'position_size': 0.03
-                }
-            )
-            self.strategies[f"{symbol}_MA"] = ma_strategy
-            
-            # RSI策略 - 使用更敏感的参数
-            rsi_strategy = RSIStrategy(
-                symbol=symbol,
-                parameters={
-                    'rsi_period': 10,    # 更短的周期，更敏感
-                    'oversold': 35,      # 提高超卖阈值，更容易触发买入
-                    'overbought': 65,    # 降低超买阈值，更容易触发卖出
-                    'stop_loss': 0.02,
-                    'take_profit': 0.04, # 降低止盈目标
-                    'position_size': 0.03
-                }
-            )
-            self.strategies[f"{symbol}_RSI"] = rsi_strategy
-            
-            # 机器学习策略 - 使用更敏感的参数
-            ml_strategy = MLStrategy(
-                symbol=symbol,
-                parameters={
-                    'model_type': 'random_forest',
-                    'lookback_period': 15,   # 更短的回看期
-                    'prediction_horizon': 1,
-                    'min_confidence': 0.45,  # 进一步降低信心阈值
-                    'up_threshold': 0.005,   # 0.5% - 更敏感的阈值
-                    'down_threshold': -0.005, # -0.5% - 更敏感的阈值
-                    'stop_loss': 0.02,
-                    'take_profit': 0.04,     # 降低止盈目标
-                    'position_size': 0.03,
-                    'retrain_frequency': 30, # 更频繁重训练
-                    'min_training_samples': 80  # 降低最小训练样本
-                }
-            )
-            self.strategies[f"{symbol}_ML"] = ml_strategy
-            
-            # 缠论策略 - 基于缠论理论的量化交易策略
-            chanlun_strategy = ChanlunStrategy(
-                symbol=symbol,
-                parameters={
-                    'timeframes': ['30m', '1h', '4h'],
-                    'min_swing_length': 3,
-                    'central_bank_min_bars': 3,
-                    'macd_fast': 12,
-                    'macd_slow': 26,
-                    'macd_signal': 9,
-                    'rsi_period': 14,
-                    'ma_short': 5,
-                    'ma_long': 20,
-                    'position_size': 0.3,
-                    'max_position': 1.0,
-                    'stop_loss': 0.03,
-                    'take_profit': 0.05,
-                    'trend_confirmation': 0.02,
-                    'divergence_threshold': 0.1
-                }
-            )
-            self.strategies[f"{symbol}_Chanlun"] = chanlun_strategy
-        
-        # 为扩展交易对只创建简单策略
-        extended_symbols = [s for s in valid_symbols if s not in strategy_symbols]
-        for symbol in extended_symbols:
-            # 只创建MA策略（资源消耗较小）
-            ma_strategy = MovingAverageStrategy(
-                symbol=symbol,
-                parameters={
-                    'short_window': 10,
-                    'long_window': 30,
-                    'stop_loss': 0.02,
-                    'take_profit': 0.05,
-                    'position_size': 0.02  # 较小仓位
-                }
-            )
-            self.strategies[f"{symbol}_MA"] = ma_strategy
+        self.logger.info(f"已为 {len(valid_symbols)} 个币种创建了 {len(self.strategies)} 个策略")
     
     def add_strategy(self, symbol: str, strategy_type: str, parameters: dict = None):
         """动态添加策略"""
@@ -310,7 +295,7 @@ class TradingEngine:
             return False
     
     def _start_data_collection(self):
-        """启动数据收集"""
+        """启动数据收集 - 只为用户选择的币种收集数据"""
         try:
             self.data_collection_running = True
             # 在后台启动数据收集
@@ -318,19 +303,19 @@ class TradingEngine:
             data_thread = threading.Thread(target=self._run_data_collection)
             data_thread.daemon = True
             data_thread.start()
-            self.logger.info("数据收集已启动")
+            self.logger.info(f"数据收集已启动，收集币种: {self.selected_symbols}")
         except Exception as e:
             self.logger.error(f"启动数据收集失败: {e}")
     
     def _run_data_collection(self):
-        """运行数据收集循环"""
+        """运行数据收集循环 - 只为用户选择的币种收集数据"""
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         
         try:
             loop.run_until_complete(
                 self.data_collector.start_real_time_collection(
-                    symbols=self.config.DEFAULT_SYMBOLS,
+                    symbols=self.selected_symbols,  # 只收集用户选择的币种
                     intervals=['1m', '5m', '1h']
                 )
             )
