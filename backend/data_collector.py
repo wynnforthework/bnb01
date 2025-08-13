@@ -79,32 +79,69 @@ class DataCollector:
         Base.metadata.create_all(self.db_manager.engine)
         
     async def collect_historical_data(self, symbol: str, interval: str = '1h', 
-                                    days: int = 30) -> pd.DataFrame:
+                                    days: int = 30, start_date: str = None) -> pd.DataFrame:
         """收集历史数据"""
         try:
             # 计算开始时间
-            start_time = datetime.now() - timedelta(days=days)
+            if start_date:
+                start_time = pd.to_datetime(start_date)
+            else:
+                start_time = datetime.now() - timedelta(days=days)
             
-            # 获取K线数据
-            klines = self.binance_client.get_historical_klines(
-                symbol=symbol,
-                interval=interval,
-                start_str=start_time.strftime('%Y-%m-%d'),
-                limit=1000
-            )
+            end_time = datetime.now()
             
-            if klines.empty:
+            print(f"    收集数据从 {start_time.strftime('%Y-%m-%d')} 到 {end_time.strftime('%Y-%m-%d')}...")
+            
+            # 分批次获取数据（每次最多1000条）
+            all_data = []
+            current_start = start_time
+            
+            while current_start < end_time:
+                # 计算当前批次的结束时间（每次获取约1000条记录）
+                if interval == '1h':
+                    batch_end = min(current_start + timedelta(days=42), end_time)  # 42天约1000小时
+                elif interval == '1d':
+                    batch_end = min(current_start + timedelta(days=1000), end_time)
+                else:
+                    batch_end = min(current_start + timedelta(days=30), end_time)
+                
+                print(f"      获取批次: {current_start.strftime('%Y-%m-%d')} 到 {batch_end.strftime('%Y-%m-%d')}")
+                
+                # 获取当前批次的数据
+                klines = self.binance_client.get_historical_klines(
+                    symbol=symbol,
+                    interval=interval,
+                    start_str=current_start.strftime('%Y-%m-%d'),
+                    end_str=batch_end.strftime('%Y-%m-%d'),
+                    limit=1000
+                )
+                
+                if not klines.empty:
+                    all_data.append(klines)
+                    print(f"      获得 {len(klines)} 条记录")
+                else:
+                    print(f"      该时间段无数据")
+                
+                # 移动到下一个批次
+                current_start = batch_end
+                
+                # 避免API限制，添加短暂延迟
+                await asyncio.sleep(0.1)
+            
+            if not all_data:
                 return pd.DataFrame()
             
-            # 转换为DataFrame
-            df = klines.copy()
+            # 合并所有数据
+            df = pd.concat(all_data, ignore_index=True)
             
-            # 转换数据类型
-            numeric_columns = ['open', 'high', 'low', 'close', 'volume']
-            for col in numeric_columns:
-                df[col] = pd.to_numeric(df[col])
+            # 去重并排序
+            df = df.drop_duplicates(subset=['timestamp']).sort_values('timestamp')
             
-            df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+            print(f"    总共获得 {len(df)} 条记录")
+            
+            # 保存数据到数据库
+            await self._store_market_data(df, symbol, interval)
+            
             return df
             
         except Exception as e:
@@ -150,33 +187,45 @@ class DataCollector:
     async def _store_market_data(self, df: pd.DataFrame, symbol: str, interval: str):
         """存储市场数据到数据库"""
         try:
-            for _, row in df.iterrows():
-                market_data = MarketData(
-                    symbol=symbol,
-                    timestamp=row['timestamp'],
-                    open_price=row['open'],
-                    high_price=row['high'],
-                    low_price=row['low'],
-                    close_price=row['close'],
-                    volume=row['volume'],
-                    quote_volume=row.get('quote_volume', 0),
-                    trades_count=row.get('trades_count', 0),
-                    interval=interval
-                )
+            print(f"    正在保存 {len(df)} 条数据到数据库...")
+            
+            # 批量处理以提高性能
+            batch_size = 100
+            for i in range(0, len(df), batch_size):
+                batch_df = df.iloc[i:i+batch_size]
                 
-                # 检查是否已存在
-                existing = self.db_manager.session.query(MarketData).filter_by(
-                    symbol=symbol,
-                    timestamp=market_data.timestamp,
-                    interval=interval
-                ).first()
+                for _, row in batch_df.iterrows():
+                    market_data = MarketData(
+                        symbol=symbol,
+                        timestamp=row['timestamp'],
+                        open_price=row['open'],
+                        high_price=row['high'],
+                        low_price=row['low'],
+                        close_price=row['close'],
+                        volume=row['volume'],
+                        quote_volume=row.get('quote_volume', 0),
+                        trades_count=row.get('trades_count', 0),
+                        interval=interval
+                    )
+                    
+                    # 检查是否已存在
+                    existing = self.db_manager.session.query(MarketData).filter_by(
+                        symbol=symbol,
+                        timestamp=market_data.timestamp,
+                        interval=interval
+                    ).first()
+                    
+                    if not existing:
+                        self.db_manager.session.add(market_data)
                 
-                if not existing:
-                    self.db_manager.session.add(market_data)
-                    self.db_manager.session.commit()
+                # 批量提交
+                self.db_manager.session.commit()
+                
+            print(f"    ✅ 数据保存完成")
                     
         except Exception as e:
             self.logger.error(f"存储市场数据失败: {e}")
+            print(f"    ❌ 数据保存失败: {e}")
             self.db_manager.session.rollback()
     
     def calculate_technical_indicators(self, df: pd.DataFrame, symbol: str) -> pd.DataFrame:

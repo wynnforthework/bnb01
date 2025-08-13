@@ -1,0 +1,76 @@
+{
+  "MA_ETHUSDT": {
+    "strategy_type": "MA",
+    "symbol": "ETHUSDT",
+    "parameters": {
+      "short_window": 8,
+      "long_window": 34,
+      "position_size": 2.0,
+      "stop_loss": 0.01,
+      "take_profit": 0.08
+    },
+    "performance": {
+      "total_return": 0.0,
+      "sharpe_ratio": 0.0,
+      "win_rate": 0.0,
+      "max_drawdown": 0.0
+    },
+    "timestamp": "2025-08-13T12:21:32.775024"
+  },
+  "RSI_ETHUSDT": {
+    "strategy_type": "RSI",
+    "symbol": "ETHUSDT",
+    "parameters": {
+      "rsi_period": 17,
+      "overbought": 78,
+      "oversold": 26,
+      "position_size": 0.1,
+      "stop_loss": 0.05,
+      "take_profit": 0.1
+    },
+    "performance": {
+      "total_return": 0.0,
+      "sharpe_ratio": 0.0,
+      "win_rate": 0.0,
+      "max_drawdown": 0.0
+    },
+    "timestamp": "2025-08-13T12:21:37.827203"
+  },
+  "ML_ETHUSDT": {
+    "strategy_type": "ML",
+    "symbol": "ETHUSDT",
+    "parameters": {
+      "lookback_period": 38,
+      "prediction_horizon": 1,
+      "model_type": "random_forest",
+      "position_size": 2.0,
+      "stop_loss": 0.05,
+      "take_profit": 0.02
+    },
+    "performance": {
+      "total_return": 0.0,
+      "sharpe_ratio": 0.0,
+      "win_rate": 0.0,
+      "max_drawdown": 0.0
+    },
+    "timestamp": "2025-08-13T12:21:42.873916"
+  },
+  "Chanlun_ETHUSDT": {
+    "strategy_type": "Chanlun",
+    "symbol": "ETHUSDT",
+    "parameters": {
+      "min_swing_length": 5,
+      "trend_confirmation": 0.02,
+      "position_size": 1.0,
+      "stop_loss": 0.01,
+      "take_profit": 0.03
+    },
+    "performance": {
+      "total_return": 0.0,
+      "sharpe_ratio": 0.0,
+      "win_rate": 0.0,
+      "max_drawdown": 0.0
+    },
+    "timestamp": "2025-08-13T12:21:47.924030"
+  }
+}

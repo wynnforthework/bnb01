@@ -1,0 +1,53 @@
+[
+  {
+    "test_id": "MA_ETHUSDT_1755059637",
+    "strategy_type": "MA",
+    "symbol": "ETHUSDT",
+    "params": {
+      "short_window": 8,
+      "long_window": 50,
+      "position_size": 5.0,
+      "stop_loss": 0.03,
+      "take_profit": 0.03
+    },
+    "metrics": {
+      "total_return": 10436.725860426344,
+      "sharpe_ratio": 3.1128143347441823,
+      "max_drawdown": -500.4999999999999,
+      "win_rate": 92.85714285714286,
+      "profit_factor": 999.99,
+      "total_trades": 14,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T12:33:58.273079",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  },
+  {
+    "test_id": "RSI_ETHUSDT_1755059643",
+    "strategy_type": "RSI",
+    "symbol": "ETHUSDT",
+    "params": {
+      "rsi_period": 9,
+      "overbought": 69,
+      "oversold": 26,
+      "position_size": 5.0,
+      "stop_loss": 0.02,
+      "take_profit": 0.1
+    },
+    "metrics": {
+      "total_return": 235076.63232568826,
+      "sharpe_ratio": 2.666857705626947,
+      "max_drawdown": -508.9661196819462,
+      "win_rate": 98.10606060606061,
+      "profit_factor": 8670.072296117794,
+      "total_trades": 264,
+      "avg_trade_duration": 1.0
+    },
+    "timestamp": "2025-08-13T12:34:04.787383",
+    "trading_mode": "SPOT",
+    "start_date": "2025-07-02",
+    "end_date": "2025-08-13"
+  }
+]

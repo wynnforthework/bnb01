@@ -1,0 +1,17 @@
+{
+  "symbols": [
+    "ETHUSDT"
+  ],
+  "trading_mode": "SPOT",
+  "start_date": "2024-01-01",
+  "end_date": "2025-08-13",
+  "max_iterations": 1000,
+  "population_size": 50,
+  "elite_size": 10,
+  "mutation_rate": 0.1,
+  "crossover_rate": 0.8,
+  "test_interval": 5,
+  "save_results": true,
+  "results_file": "optimization_results.json",
+  "database_file": "optimization_results.db"
+}
