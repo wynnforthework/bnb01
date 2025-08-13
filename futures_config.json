@@ -1,17 +1,15 @@
 {
   "leverage": 10,
   "symbols": [
-    "BTCUSDT",
-    "ETHUSDT",
-    "BNBUSDT",
-    "ADAUSDT"
+    "BTCUSDT", "ETHUSDT", "BNBUSDT", "ADAUSDT", "DOGEUSDT", "SOLUSDT", 
+    "DOTUSDT", "AVAXUSDT", "LINKUSDT", "UNIUSDT", "LTCUSDT", "ATOMUSDT", 
+    "FILUSDT", "XRPUSDT", "MATICUSDT", "SHIBUSDT", "TRXUSDT", "XLMUSDT",
+    "BCHUSDT", "ETCUSDT", "NEARUSDT", "FTMUSDT", "ALGOUSDT", "VETUSDT",
+    "ICPUSDT", "THETAUSDT", "XMRUSDT", "EOSUSDT", "AAVEUSDT", "SUSHIUSDT"
   ],
   "safe_symbols": [
-    "BTCUSDT",
-    "ETHUSDT",
-    "BNBUSDT",
-    "ADAUSDT",
-    "DOGEUSDT"
+    "BTCUSDT", "ETHUSDT", "BNBUSDT", "ADAUSDT", "DOGEUSDT", "SOLUSDT", 
+    "DOTUSDT", "AVAXUSDT", "LINKUSDT", "UNIUSDT", "LTCUSDT", "ATOMUSDT"
   ],
   "avoid_symbols": [
     "FILUSDT"
@@ -21,8 +19,8 @@
   "default_leverage": 10,
   "max_spread_percent": 5,
   "min_balance_required": 50,
-  "updated_at": "2025-08-08T15:00:00.000000",
+  "updated_at": "2025-01-27T10:00:00.000000",
   "enabled_strategies": [
-    "MA"
+    "MA", "RSI", "ML", "Chanlun"
   ]
 }

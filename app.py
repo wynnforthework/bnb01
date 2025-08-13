@@ -1214,13 +1214,28 @@ def start_futures_trading():
     try:
         data = request.get_json()
         
-        # 使用保存的配置或请求中的配置
+        # 获取现货交易的币种和策略配置
+        symbols = spot_config['symbols']  # 使用现货交易的币种
+        leverage = data.get('leverage', 10)
+        enabled_strategies = data.get('enabled_strategies', [])
+        
+        # 如果没有传递策略，从现货交易配置中获取
+        if not enabled_strategies:
+            enabled_strategies = []
+            for strategy_key, is_enabled in spot_config['enabled_strategies'].items():
+                if is_enabled:
+                    strategy_type = strategy_key.split('_')[1]  # 格式: BTCUSDT_MA -> MA
+                    if strategy_type not in enabled_strategies:
+                        enabled_strategies.append(strategy_type)
+        
+        if not enabled_strategies:
+            return jsonify({'success': False, 'message': '请先在现货交易中启用至少一个策略'})
+        
+        # 更新合约配置以使用现货交易的设置
         if 'futures_config' in globals():
-            leverage = futures_config.get('leverage', data.get('leverage', 10))
-            symbols = futures_config.get('symbols', data.get('symbols', ['BTCUSDT', 'ETHUSDT']))
-        else:
-            leverage = data.get('leverage', 10)
-            symbols = data.get('symbols', ['BTCUSDT', 'ETHUSDT'])
+            futures_config['symbols'] = symbols
+            futures_config['enabled_strategies'] = enabled_strategies
+            futures_config['leverage'] = leverage
         
         if futures_trading_engine is None:
             futures_trading_engine = TradingEngine(trading_mode='FUTURES', leverage=leverage)
@@ -1231,7 +1246,7 @@ def start_futures_trading():
             trading_thread.start()
             return jsonify({
                 'success': True, 
-                'message': f'合约交易已启动，杠杆: {leverage}x，币种: {", ".join(symbols)}'
+                'message': f'合约交易已启动，杠杆: {leverage}x，币种: {len(symbols)}个，策略: {", ".join(enabled_strategies)}'
             })
         else:
             return jsonify({'success': False, 'message': '合约交易已在运行中'})
@@ -1246,6 +1261,31 @@ def stop_futures_trading():
         futures_trading_engine.stop_trading()
         return jsonify({'success': True, 'message': '合约交易已停止'})
     return jsonify({'success': False, 'message': '合约交易未在运行'})
+
+@app.route('/api/futures/spot-config')
+def get_spot_config_for_futures():
+    """获取现货配置用于合约交易"""
+    try:
+        # 获取启用的策略
+        enabled_strategies = []
+        for strategy_key, is_enabled in spot_config['enabled_strategies'].items():
+            if is_enabled:
+                strategy_type = strategy_key.split('_')[1]  # 格式: BTCUSDT_MA -> MA
+                if strategy_type not in enabled_strategies:
+                    enabled_strategies.append(strategy_type)
+        
+        return jsonify({
+            'success': True,
+            'symbols': spot_config['symbols'],
+            'enabled_strategies': enabled_strategies,
+            'total_symbols': len(spot_config['symbols']),
+            'total_strategies': len(enabled_strategies)
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'获取现货配置失败: {str(e)}'
+        })
 
 @app.route('/api/futures/trading/status')
 def get_futures_trading_status():
@@ -1930,21 +1970,21 @@ def run_futures_strategy_backtest(symbol, strategy_type):
         backtest_engine = BacktestEngine()
         backtest_result = backtest_engine.run_backtest(
             strategy=strategy,
-            data=available_data,
+            symbol=symbol,
             start_date=start_date,
             end_date=end_date,
-            initial_capital=10000
+            interval='1h'
         )
         
         if backtest_result:
             return {
                 'symbol': symbol,
                 'strategy_type': strategy_type,
-                'total_return': backtest_result.get('total_return', 0),
-                'win_rate': backtest_result.get('win_rate', 0),
-                'trade_count': backtest_result.get('trade_count', 0),
-                'max_drawdown': backtest_result.get('max_drawdown', 0),
-                'sharpe_ratio': backtest_result.get('sharpe_ratio', 0),
+                'total_return': backtest_result.total_return,
+                'win_rate': backtest_result.win_rate,
+                'trade_count': backtest_result.total_trades,
+                'max_drawdown': backtest_result.max_drawdown,
+                'sharpe_ratio': backtest_result.sharpe_ratio,
                 'parameters': parameters
             }
         
