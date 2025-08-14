@@ -8,6 +8,7 @@ from backend.binance_client import BinanceClient
 from backend.database import DatabaseManager
 from backend.data_collector import DataCollector
 from backend.risk_manager import RiskManager
+from backend.position_manager import PositionManager
 from strategies.ma_strategy import MovingAverageStrategy
 from strategies.rsi_strategy import RSIStrategy
 from strategies.ml_strategy import MLStrategy, LSTMStrategy
@@ -41,6 +42,7 @@ class TradingEngine:
         self.db_manager = DatabaseManager()
         self.data_collector = DataCollector()
         self.risk_manager = RiskManager()
+        self.position_manager = PositionManager(trading_mode=self.trading_mode)
         
         self.strategies = {}
         self.is_running = False
@@ -344,7 +346,10 @@ class TradingEngine:
     
     def _execute_trading_cycle(self):
         """执行增强版交易循环"""
-        # 首先检查整体风险状况
+        # 首先执行自动持仓管理
+        self._execute_position_management()
+        
+        # 检查整体风险状况
         portfolio_risk = self.risk_manager.calculate_portfolio_risk()
         
         # 如果风险过高，暂停新开仓
@@ -536,18 +541,33 @@ class TradingEngine:
                 strategy.symbol, 1.0, current_price, portfolio_value
             )
             
-            # 执行详细的风险检查以获取失败原因
-            passed, message = self.risk_manager.check_risk_limits(
-                strategy.symbol, suggested_quantity, current_price
-            )
-            
             # 构建失败原因信息
             failure_info = f"❌ 策略: {strategy_name}"
             failure_info += f" | 信号: {signal}"
             failure_info += f" | 当前价格: ${current_price:.4f}"
             failure_info += f" | 建议仓位: {suggested_quantity:.6f}"
             failure_info += f" | 投资组合价值: ${portfolio_value:.2f}"
-            failure_info += f" | 失败原因: {message}"
+            
+            # 根据建议仓位确定失败原因
+            if suggested_quantity <= 0:
+                # 检查是否是因为现有持仓权重过高
+                existing_position = self.risk_manager.check_existing_position(strategy.symbol)
+                if existing_position > 0:
+                    should_reduce, reduce_quantity = self.risk_manager.should_reduce_position(
+                        strategy.symbol, existing_position, current_price
+                    )
+                    if should_reduce:
+                        failure_info += f" | 失败原因: 现有持仓权重过高，建议先减仓 {reduce_quantity:.6f}"
+                    else:
+                        failure_info += f" | 失败原因: 已有持仓，无需建新仓"
+                else:
+                    failure_info += f" | 失败原因: 风险计算建议仓位为0"
+            else:
+                # 执行详细的风险检查以获取失败原因
+                passed, message = self.risk_manager.check_risk_limits(
+                    strategy.symbol, suggested_quantity, current_price
+                )
+                failure_info += f" | 失败原因: {message}"
             
             self.logger.warning(failure_info)
             
@@ -823,6 +843,39 @@ class TradingEngine:
                         
         except Exception as e:
             self.logger.error(f"执行增强交易失败: {e}")
+    
+    def _execute_position_management(self):
+        """执行持仓管理 - 自动减仓和再平衡"""
+        try:
+            self.logger.info("开始执行持仓管理...")
+            
+            # 执行自动减仓
+            if self.position_manager.auto_reduce_enabled:
+                reduction_results = self.position_manager.check_and_reduce_positions()
+                
+                if reduction_results:
+                    self.logger.info(f"自动减仓完成，处理了 {len(reduction_results)} 个持仓")
+                    for symbol, result in reduction_results.items():
+                        if result['success']:
+                            self.logger.info(f"✅ {symbol} 减仓成功: {result['reduced_quantity']:.6f} (价值: ${result['reduction_value']:.2f})")
+                        else:
+                            self.logger.warning(f"❌ {symbol} 减仓失败: {result['error']}")
+                else:
+                    self.logger.info("无需减仓，所有持仓权重合理")
+            
+            # 获取持仓分析报告
+            analysis = self.position_manager.get_position_analysis()
+            if analysis:
+                self.logger.info(f"持仓分析 - 总值: ${analysis['portfolio_value']:.2f}")
+                self.logger.info(f"风险指标 - 集中度风险: {analysis['risk_metrics']['concentration_risk']}, 高风险持仓: {analysis['risk_metrics']['high_risk_positions']}")
+                
+                if analysis['recommendations']:
+                    self.logger.info("持仓建议:")
+                    for rec in analysis['recommendations']:
+                        self.logger.info(f"  - {rec['type']}: {rec.get('symbol', '')} {rec.get('message', '')}")
+            
+        except Exception as e:
+            self.logger.error(f"执行持仓管理失败: {e}")
     
     def _execute_trade(self, strategy, action, price, reason):
         """执行交易（支持现货和合约）"""

@@ -188,14 +188,14 @@
                 </div>
             </div>
 
-            <!-- 账户信息和投资组合 -->
+            <!-- 现货账户信息和投资组合 -->
             <div class="columns mb-4">
                 <div class="column is-6">
                     <div class="card">
                         <header class="card-header">
                             <p class="card-header-title">
                                 <i class="fas fa-wallet"></i>
-                                <span class="ml-2">账户余额</span>
+                                <span class="ml-2">现货账户余额</span>
                             </p>
                         </header>
                         <div class="card-content">
@@ -215,13 +215,57 @@
                         <header class="card-header">
                             <p class="card-header-title">
                                 <i class="fas fa-chart-pie"></i>
-                                <span class="ml-2">投资组合</span>
+                                <span class="ml-2">现货投资组合</span>
                             </p>
                         </header>
                         <div class="card-content">
                             <div id="portfolio-summary">
                                 <div class="has-text-centered">
                                     <span class="icon is-large">
+                                        <i class="fas fa-spinner fa-spin"></i>
+                                    </span>
+                                    <p class="mt-2">加载中...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 合约账户信息和投资组合 -->
+            <div class="columns mb-4">
+                <div class="column is-6">
+                    <div class="card">
+                        <header class="card-header">
+                            <p class="card-header-title">
+                                <i class="fas fa-wallet"></i>
+                                <span class="ml-2">合约账户</span>
+                            </p>
+                        </header>
+                        <div class="card-content">
+                            <div id="futures-account-info">
+                                <div class="has-text-centered">
+                                    <span class="icon is-large has-text-warning">
+                                        <i class="fas fa-spinner fa-spin"></i>
+                                    </span>
+                                    <p class="mt-2">加载中...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="column is-6">
+                    <div class="card">
+                        <header class="card-header">
+                            <p class="card-header-title">
+                                <i class="fas fa-chart-pie"></i>
+                                <span class="ml-2">合约持仓概览</span>
+                            </p>
+                        </header>
+                        <div class="card-content">
+                            <div id="futures-portfolio-summary">
+                                <div class="has-text-centered">
+                                    <span class="icon is-large has-text-warning">
                                         <i class="fas fa-spinner fa-spin"></i>
                                     </span>
                                     <p class="mt-2">加载中...</p>
