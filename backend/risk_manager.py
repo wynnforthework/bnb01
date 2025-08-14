@@ -67,11 +67,23 @@ class RiskManager:
             avg_win = self._get_average_win(symbol)
             avg_loss = self._get_average_loss(symbol)
             
-            if avg_loss > 0:
-                kelly_fraction = (win_rate * avg_win - (1 - win_rate) * avg_loss) / avg_win
-                kelly_fraction = max(0, min(kelly_fraction, 0.25))  # 限制在0-25%之间
+            # 检查是否有足够的历史数据
+            from backend.database import Trade
+            completed_trades = self.db_manager.session.query(Trade).filter_by(
+                symbol=symbol
+            ).filter(Trade.profit_loss != 0).limit(10).all()
+            
+            # 如果没有足够的完成交易历史，使用保守的默认值
+            if len(completed_trades) < 5:
+                self.logger.info(f"{symbol} 历史数据不足，使用保守默认值")
+                kelly_fraction = 0.05  # 5% 保守仓位
             else:
-                kelly_fraction = 0.1
+                # 使用Kelly公式
+                if avg_loss > 0 and avg_win > 0:
+                    kelly_fraction = (win_rate * avg_win - (1 - win_rate) * avg_loss) / avg_win
+                    kelly_fraction = max(0, min(kelly_fraction, 0.25))  # 限制在0-25%之间
+                else:
+                    kelly_fraction = 0.05  # 默认5%
             
             # 基于波动率调整
             volatility_adjustment = min(1.0, 0.2 / volatility) if volatility > 0 else 1.0
@@ -85,6 +97,12 @@ class RiskManager:
             # 应用风险限制
             max_weight = self._get_max_position_weight(symbol, portfolio_value)
             final_weight = min(suggested_weight, max_weight)
+            
+            # 确保最小仓位（用于测试和初始阶段）
+            min_weight = 0.01  # 最小1%仓位
+            if final_weight < min_weight and len(completed_trades) < 10:
+                final_weight = min_weight
+                self.logger.info(f"{symbol} 使用最小仓位 {min_weight:.1%} 进行测试")
             
             # 转换为实际数量
             position_value = portfolio_value * final_weight
@@ -231,7 +249,10 @@ class RiskManager:
             # 夏普比率
             risk_free_rate = 0.02 / 252  # 日无风险利率
             excess_returns = daily_returns - risk_free_rate
-            sharpe_ratio = excess_returns.mean() / excess_returns.std() * np.sqrt(252)
+            if excess_returns.std() > 0:
+                sharpe_ratio = excess_returns.mean() / excess_returns.std() * np.sqrt(252)
+            else:
+                sharpe_ratio = 0  # 如果没有波动性，夏普比率为0
             
             # Beta和相关性（相对于BTC）
             btc_returns = self._get_btc_returns()
@@ -243,7 +264,10 @@ class RiskManager:
                     btc_aligned = btc_returns.loc[common_dates]
                     
                     correlation_btc = portfolio_aligned.corr(btc_aligned)
-                    beta = portfolio_aligned.cov(btc_aligned) / btc_aligned.var()
+                    if btc_aligned.var() > 0:
+                        beta = portfolio_aligned.cov(btc_aligned) / btc_aligned.var()
+                    else:
+                        beta = 1  # 如果BTC没有波动性，beta设为1
                 else:
                     correlation_btc = 0
                     beta = 1
@@ -303,7 +327,10 @@ class RiskManager:
                             btc_aligned = btc_returns.loc[common_dates]
                             
                             correlation = asset_aligned.corr(btc_aligned)
-                            beta = asset_aligned.cov(btc_aligned) / btc_aligned.var()
+                            if btc_aligned.var() > 0:
+                                beta = asset_aligned.cov(btc_aligned) / btc_aligned.var()
+                            else:
+                                beta = 1  # 如果BTC没有波动性，beta设为1
                 
                 position_risk = PositionRisk(
                     symbol=position.symbol,

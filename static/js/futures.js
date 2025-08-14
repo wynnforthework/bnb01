@@ -1,54 +1,76 @@
-// 合约交易页面JavaScript
+// 合约交易页面JavaScript - 版本 1.3
+console.log('🎯 futures.js 文件已加载 - 版本 1.3');
+
 let futuresSocket;
 let currentFuturesSymbol = 'BTCUSDT';
 let currentLeverage = 10;
-let selectedSymbols = ['BTCUSDT', 'ETHUSDT'];
+let futuresSelectedSymbols = ['BTCUSDT', 'ETHUSDT'];
 let futuresStrategies = []; // 全局策略数据
 
 // 初始化合约交易页面
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 合约交易页面初始化开始...');
     initializeFuturesSocket();
     loadFuturesInitialData();
     bindFuturesEvents();
     checkFuturesTradingStatus();
+    console.log('✅ 合约交易页面初始化完成');
 });
 
 // 初始化WebSocket连接
 function initializeFuturesSocket() {
-    futuresSocket = io();
-    
-    futuresSocket.on('connect', function() {
-        console.log('合约交易WebSocket连接成功');
-    });
-    
-    futuresSocket.on('futures_portfolio_update', function(data) {
-        updateFuturesPortfolioDisplay(data);
-    });
-    
-    futuresSocket.on('futures_trades_update', function(data) {
-        updateFuturesTradesDisplay(data);
-    });
-    
-    futuresSocket.on('disconnect', function() {
-        console.log('合约交易WebSocket连接断开');
-    });
+    try {
+        futuresSocket = io();
+        
+        futuresSocket.on('connect', function() {
+            console.log('✅ 合约交易WebSocket连接成功');
+        });
+        
+        futuresSocket.on('futures_portfolio_update', function(data) {
+            updateFuturesPortfolioDisplay(data);
+        });
+        
+        futuresSocket.on('futures_trades_update', function(data) {
+            updateFuturesTradesDisplay(data);
+        });
+        
+        futuresSocket.on('disconnect', function() {
+            console.log('❌ 合约交易WebSocket连接断开');
+        });
+    } catch (error) {
+        console.error('❌ WebSocket初始化失败:', error);
+    }
 }
 
 // 绑定合约交易事件
 function bindFuturesEvents() {
     console.log('🔧 开始绑定合约交易事件...');
+    console.log('🔍 当前页面URL:', window.location.href);
+    console.log('🔍 当前页面标题:', document.title);
     
     try {
         // 启动合约交易
         const startButton = document.getElementById('start-futures-trading');
+        console.log('🔍 查找启动合约交易按钮:', startButton);
+        
         if (startButton) {
+            console.log('✅ 找到启动合约交易按钮，ID:', startButton.id);
+            console.log('✅ 按钮文本:', startButton.textContent);
+            console.log('✅ 按钮类名:', startButton.className);
+            
             startButton.addEventListener('click', function() {
                 console.log('🚀 启动合约交易按钮被点击');
+                console.log('🚀 按钮元素:', this);
                 startFuturesTrading();
             });
             console.log('✅ 启动合约交易按钮事件绑定成功');
         } else {
             console.error('❌ 未找到启动合约交易按钮');
+            console.error('❌ 页面中的所有按钮:');
+            const allButtons = document.querySelectorAll('button');
+            allButtons.forEach((btn, index) => {
+                console.error(`   ${index}: id="${btn.id}", text="${btn.textContent}"`);
+            });
         }
         
         // 停止合约交易
@@ -165,6 +187,10 @@ async function loadFuturesAccountData() {
 // 显示合约账户信息
 function displayFuturesAccountInfo(account) {
     const container = document.getElementById('futures-account-info');
+    if (!container) {
+        console.error('❌ 未找到合约账户信息容器');
+        return;
+    }
     
     const html = `
         <div class="row">
@@ -224,10 +250,15 @@ function displayFuturesPositions(positions) {
     const tbody = document.querySelector('#futures-positions-table tbody');
     const detailTbody = document.querySelector('#futures-positions-detail-table tbody');
     
+    if (!tbody) {
+        console.error('❌ 未找到合约持仓表格');
+        return;
+    }
+    
     if (positions.length === 0) {
         const emptyRow = '<tr><td colspan="10" class="text-center">暂无合约持仓</td></tr>';
         tbody.innerHTML = emptyRow;
-        detailTbody.innerHTML = emptyRow;
+        if (detailTbody) detailTbody.innerHTML = emptyRow;
         return;
     }
     
@@ -264,12 +295,16 @@ function displayFuturesPositions(positions) {
     });
     
     tbody.innerHTML = html;
-    detailTbody.innerHTML = html;
+    if (detailTbody) detailTbody.innerHTML = html;
 }
 
 // 更新合约投资组合概览
 function updateFuturesPortfolioSummary(positions) {
     const container = document.getElementById('futures-portfolio-summary');
+    if (!container) {
+        console.error('❌ 未找到投资组合概览容器');
+        return;
+    }
     
     let totalValue = 0;
     let totalPnl = 0;
@@ -327,6 +362,10 @@ async function loadFuturesTradesData() {
 // 显示合约交易历史
 function displayFuturesTradesData(trades) {
     const tbody = document.querySelector('#futures-trades-table tbody');
+    if (!tbody) {
+        console.error('❌ 未找到合约交易历史表格');
+        return;
+    }
     
     if (trades.length === 0) {
         tbody.innerHTML = '<tr><td colspan="8" class="text-center">暂无合约交易记录</td></tr>';
@@ -358,10 +397,14 @@ function displayFuturesTradesData(trades) {
 
 // 启动合约交易
 async function startFuturesTrading() {
+    console.log('🚀 开始启动合约交易...');
+    
     try {
         // 获取现货配置
         const configResponse = await fetch('/api/futures/spot-config');
         const configData = await configResponse.json();
+        
+        console.log('现货配置响应:', configData);
         
         if (!configData.success) {
             showError('获取现货配置失败: ' + configData.message);
@@ -373,6 +416,12 @@ async function startFuturesTrading() {
             return;
         }
         
+        console.log('准备启动合约交易，参数:', {
+            leverage: currentLeverage,
+            symbols: futuresSelectedSymbols,
+            enabled_strategies: configData.enabled_strategies
+        });
+        
         const response = await fetch('/api/futures/trading/start', {
             method: 'POST',
             headers: {
@@ -380,12 +429,13 @@ async function startFuturesTrading() {
             },
             body: JSON.stringify({
                 leverage: currentLeverage,
-                symbols: selectedSymbols,
+                symbols: futuresSelectedSymbols,
                 enabled_strategies: configData.enabled_strategies
             })
         });
         
         const data = await response.json();
+        console.log('启动合约交易响应:', data);
         
         if (data.success) {
             showSuccess(`合约交易已启动，使用现货策略: ${configData.enabled_strategies.join(', ')}`);
@@ -394,18 +444,22 @@ async function startFuturesTrading() {
             showError(data.message);
         }
     } catch (error) {
+        console.error('启动合约交易失败:', error);
         showError('启动合约交易失败: ' + error.message);
     }
 }
 
 // 停止合约交易
 async function stopFuturesTrading() {
+    console.log('🛑 开始停止合约交易...');
+    
     try {
         const response = await fetch('/api/futures/trading/stop', {
             method: 'POST'
         });
         
         const data = await response.json();
+        console.log('停止合约交易响应:', data);
         
         if (data.success) {
             showSuccess(data.message);
@@ -414,6 +468,7 @@ async function stopFuturesTrading() {
             showError(data.message);
         }
     } catch (error) {
+        console.error('停止合约交易失败:', error);
         showError('停止合约交易失败: ' + error.message);
     }
 }
@@ -447,7 +502,7 @@ async function updateFuturesConfig() {
         if (result.success) {
             // 更新本地变量
             currentLeverage = leverage;
-            selectedSymbols = symbols;
+            futuresSelectedSymbols = symbols;
             
             // 更新显示
             updateFuturesLeverageStatus();
@@ -465,20 +520,29 @@ async function updateFuturesConfig() {
 
 // 更新杠杆状态显示
 function updateFuturesLeverageStatus() {
-    document.getElementById('futures-leverage-status').textContent = currentLeverage + 'x';
+    const statusElement = document.getElementById('futures-leverage-status');
+    if (statusElement) {
+        statusElement.textContent = currentLeverage + 'x';
+    }
 }
 
 // 更新选中币种状态
 function updateSelectedSymbols() {
-    selectedSymbols = Array.from(document.getElementById('futures-symbols').selectedOptions)
-                          .map(option => option.value);
-    updateSelectedSymbolsStatus();
+    const symbolsSelect = document.getElementById('futures-symbols');
+    if (symbolsSelect) {
+        futuresSelectedSymbols = Array.from(symbolsSelect.selectedOptions)
+                              .map(option => option.value);
+        updateSelectedSymbolsStatus();
+    }
 }
 
 // 更新选中币种状态显示
 function updateSelectedSymbolsStatus() {
-    const symbolsText = selectedSymbols.map(s => s.replace('USDT', '')).join(', ');
-    document.getElementById('futures-symbols-status').textContent = symbolsText;
+    const statusElement = document.getElementById('futures-symbols-status');
+    if (statusElement) {
+        const symbolsText = futuresSelectedSymbols.map(s => s.replace('USDT', '')).join(', ');
+        statusElement.textContent = symbolsText;
+    }
 }
 
 // 检查合约交易状态
@@ -504,22 +568,24 @@ function updateFuturesTradingStatus(isRunning) {
     const statusElement = document.getElementById('futures-trading-status');
     const badgeElement = document.getElementById('futures-mode-status');
     
-    if (isRunning) {
-        statusElement.innerHTML = '<i class="fas fa-circle text-success"></i> 运行中';
-        if (badgeElement) {
+    if (statusElement) {
+        if (isRunning) {
+            statusElement.innerHTML = '<i class="fas fa-circle text-success"></i> 运行中';
+        } else {
+            statusElement.innerHTML = '<i class="fas fa-circle text-danger"></i> 未运行';
+        }
+    }
+    
+    if (badgeElement) {
+        if (isRunning) {
             badgeElement.className = 'badge bg-success text-white';
             badgeElement.textContent = '运行中';
-        }
-    } else {
-        statusElement.innerHTML = '<i class="fas fa-circle text-danger"></i> 未运行';
-        if (badgeElement) {
+        } else {
             badgeElement.className = 'badge bg-warning text-dark';
             badgeElement.textContent = '合约模式';
         }
     }
 }
-
-
 
 // 切换合约价格输入显示
 function toggleFuturesPriceInput(orderType) {
@@ -657,19 +723,44 @@ async function closeFuturesPosition(symbol, positionSide) {
     }
 }
 
+// 更新合约投资组合显示
+function updateFuturesPortfolioDisplay(data) {
+    // 更新投资组合显示
+    console.log('更新合约投资组合显示:', data);
+}
 
+// 更新合约交易显示
+function updateFuturesTradesDisplay(data) {
+    // 更新交易显示
+    console.log('更新合约交易显示:', data);
+}
+
+// 打开模态框
+function openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        const bootstrapModal = new bootstrap.Modal(modal);
+        bootstrapModal.show();
+    } else {
+        console.error('未找到模态框:', modalId);
+    }
+}
 
 // 工具函数
 function showSuccess(message) {
-    // 显示成功消息的实现
-    console.log('Success:', message);
+    console.log('✅ Success:', message);
     // 这里可以添加toast或alert的实现
+    if (typeof alert !== 'undefined') {
+        alert('成功: ' + message);
+    }
 }
 
 function showError(message) {
-    // 显示错误消息的实现
-    console.error('Error:', message);
+    console.error('❌ Error:', message);
     // 这里可以添加toast或alert的实现
+    if (typeof alert !== 'undefined') {
+        alert('错误: ' + message);
+    }
 }
 
 // 定期刷新合约数据
@@ -813,7 +904,7 @@ async function loadSavedConfig() {
                 option.selected = shouldSelect;
                 if (shouldSelect) selectedCount++;
             });
-            selectedSymbols = config.symbols;
+            futuresSelectedSymbols = config.symbols;
             console.log('币种选择完成，选中数量:', selectedCount);
             
             // 更新显示
@@ -843,17 +934,19 @@ async function loadSavedConfig() {
 // 加载现货配置用于合约交易
 async function loadSpotConfigForFutures() {
     try {
-        console.log('开始加载现货配置用于合约交易...');
+        console.log('🔄 开始加载现货配置用于合约交易...');
         
         // 使用新的API端点获取现货配置
         const response = await fetch('/api/futures/spot-config');
         const data = await response.json();
         
+        console.log('现货配置响应:', data);
+        
         if (data.success) {
             // 更新全局变量
-            selectedSymbols = data.symbols;
+            futuresSelectedSymbols = data.symbols;
             
-            console.log('现货配置加载成功:', {
+            console.log('✅ 现货配置加载成功:', {
                 symbols: data.symbols,
                 enabledStrategies: data.enabled_strategies,
                 totalSymbols: data.total_symbols,
@@ -864,10 +957,10 @@ async function loadSpotConfigForFutures() {
             updateFuturesControlPanel(data.symbols, data.enabled_strategies);
             
         } else {
-            console.error('加载现货配置失败:', data.message);
+            console.error('❌ 加载现货配置失败:', data.message);
         }
     } catch (error) {
-        console.error('加载现货配置异常:', error);
+        console.error('❌ 加载现货配置异常:', error);
     }
 }
 

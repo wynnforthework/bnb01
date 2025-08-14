@@ -363,6 +363,7 @@ class TradingEngine:
                 data = self._get_enhanced_market_data(strategy.symbol)
                 
                 if data is None or len(data) == 0:
+                    self.logger.warning(f"策略 {strategy_name}: 无法获取市场数据")
                     continue
                 
                 current_price = data['close'].iloc[-1]
@@ -375,10 +376,16 @@ class TradingEngine:
                 # 生成交易信号
                 signal = strategy.generate_signal(data)
                 
+                # 详细输出策略信号信息
+                self._log_strategy_signal(strategy_name, strategy, signal, current_price, data)
+                
                 if signal in ['BUY', 'SELL']:
                     # 风险检查
                     if self._risk_check_passed(strategy, signal, current_price):
                         self._execute_enhanced_trade(strategy, signal, current_price, 'SIGNAL')
+                    else:
+                        # 记录风险检查失败的原因
+                        self._log_risk_check_failure(strategy_name, strategy, signal, current_price)
                     
             except Exception as e:
                 self.logger.error(f"策略 {strategy_name} 执行错误: {e}")
@@ -490,6 +497,102 @@ class TradingEngine:
             self.logger.error(f"风险检查失败: {e}")
             return False
     
+    def _log_strategy_signal(self, strategy_name: str, strategy, signal: str, current_price: float, data):
+        """记录策略信号详细信息"""
+        try:
+            # 获取市场数据统计信息
+            data_length = len(data) if data is not None else 0
+            price_change = 0
+            if data_length >= 2:
+                price_change = ((current_price - data['close'].iloc[-2]) / data['close'].iloc[-2]) * 100
+            
+            # 构建详细的信号信息
+            signal_info = f"策略: {strategy_name}"
+            signal_info += f" | 信号: {signal}"
+            signal_info += f" | 当前价格: ${current_price:.4f}"
+            signal_info += f" | 价格变化: {price_change:+.2f}%"
+            signal_info += f" | 当前持仓: {strategy.position:.6f}"
+            signal_info += f" | 市场数据: {data_length} 条记录"
+            
+            # 根据信号类型输出不同级别的日志
+            if signal == 'HOLD':
+                self.logger.info(f"📊 {signal_info}")
+            elif signal in ['BUY', 'SELL']:
+                self.logger.info(f"🎯 {signal_info}")
+            else:
+                self.logger.warning(f"❓ {signal_info} | 未知信号类型: {signal}")
+                # 将未知信号视为HOLD
+                signal = 'HOLD'
+                
+        except Exception as e:
+            self.logger.error(f"记录策略信号信息失败: {e}")
+    
+    def _log_risk_check_failure(self, strategy_name: str, strategy, signal: str, current_price: float):
+        """记录风险检查失败的详细原因"""
+        try:
+            # 获取风险检查的详细信息
+            portfolio_value = self.risk_manager._get_portfolio_value()
+            suggested_quantity = self.risk_manager.calculate_position_size(
+                strategy.symbol, 1.0, current_price, portfolio_value
+            )
+            
+            # 执行详细的风险检查以获取失败原因
+            passed, message = self.risk_manager.check_risk_limits(
+                strategy.symbol, suggested_quantity, current_price
+            )
+            
+            # 构建失败原因信息
+            failure_info = f"❌ 策略: {strategy_name}"
+            failure_info += f" | 信号: {signal}"
+            failure_info += f" | 当前价格: ${current_price:.4f}"
+            failure_info += f" | 建议仓位: {suggested_quantity:.6f}"
+            failure_info += f" | 投资组合价值: ${portfolio_value:.2f}"
+            failure_info += f" | 失败原因: {message}"
+            
+            self.logger.warning(failure_info)
+            
+            # 如果是仓位大小为0的情况，提供更详细的解释
+            if suggested_quantity <= 0:
+                self._log_position_size_analysis(strategy_name, strategy, current_price, portfolio_value)
+                
+        except Exception as e:
+            self.logger.error(f"记录风险检查失败信息失败: {e}")
+    
+    def _log_position_size_analysis(self, strategy_name: str, strategy, current_price: float, portfolio_value: float):
+        """分析并记录仓位大小为0的原因"""
+        try:
+            # 获取策略历史数据
+            from backend.database import Trade
+            completed_trades = self.db_manager.session.query(Trade).filter_by(
+                symbol=strategy.symbol
+            ).filter(Trade.profit_loss != 0).limit(10).all()
+            
+            # 获取策略性能指标
+            win_rate = self.risk_manager._get_strategy_win_rate(strategy.symbol)
+            avg_win = self.risk_manager._get_average_win(strategy.symbol)
+            avg_loss = self.risk_manager._get_average_loss(strategy.symbol)
+            volatility = self.risk_manager._calculate_volatility(strategy.symbol)
+            
+            # 构建分析信息
+            analysis_info = f"📊 仓位分析 - {strategy_name}:"
+            analysis_info += f" | 历史交易: {len(completed_trades)} 条"
+            analysis_info += f" | 策略胜率: {win_rate:.2%}"
+            analysis_info += f" | 平均盈利: {avg_win:.2%}"
+            analysis_info += f" | 平均亏损: {avg_loss:.2%}"
+            analysis_info += f" | 资产波动率: {volatility:.2%}"
+            
+            if len(completed_trades) < 5:
+                analysis_info += " | 原因: 历史数据不足，使用保守默认值"
+            elif win_rate == 0:
+                analysis_info += " | 原因: 策略历史表现不佳"
+            else:
+                analysis_info += " | 原因: Kelly公式计算结果为0"
+            
+            self.logger.info(analysis_info)
+            
+        except Exception as e:
+            self.logger.error(f"分析仓位大小失败: {e}")
+    
     def _execute_enhanced_trade(self, strategy, action: str, price: float, reason: str):
         """执行增强版交易"""
         try:
@@ -557,12 +660,23 @@ class TradingEngine:
                             strategy=strategy.__class__.__name__
                         )
                         
+                        # 详细的交易执行信息
                         trade_type = "合约做多" if self.trading_mode == 'FUTURES' else "现货买入"
-                        self.logger.info(f"{trade_type} {strategy.symbol}: {quantity:.6f} @ ${price:.4f}")
+                        trade_info = f"✅ 交易执行成功 - {trade_type}"
+                        trade_info += f" | 交易对: {strategy.symbol}"
+                        trade_info += f" | 数量: {quantity:.6f}"
+                        trade_info += f" | 价格: ${price:.4f}"
+                        trade_info += f" | 价值: ${quantity * price:.2f}"
+                        
                         if self.trading_mode == 'FUTURES':
-                            self.logger.info(f"  杠杆: {self.leverage}x")
-                        self.logger.info(f"  止损: ${stop_loss:.4f}, 止盈: ${take_profit:.4f}")
-                        self.logger.info(f"  持仓已更新到数据库")
+                            trade_info += f" | 杠杆: {self.leverage}x"
+                        
+                        trade_info += f" | 止损: ${stop_loss:.4f}"
+                        trade_info += f" | 止盈: ${take_profit:.4f}"
+                        trade_info += f" | 风险回报比: {((take_profit - price) / (price - stop_loss)):.2f}"
+                        
+                        self.logger.info(trade_info)
+                        self.logger.info(f"📊 持仓已更新到数据库")
             
             elif action == 'SELL' and strategy.position >= 0:
                 if strategy.position > 0:
@@ -606,9 +720,19 @@ class TradingEngine:
                             profit_loss=profit_loss
                         )
                         
+                        # 详细的卖出交易信息
                         trade_type = "合约平多" if self.trading_mode == 'FUTURES' else "现货卖出"
-                        self.logger.info(f"{trade_type} {strategy.symbol}: {quantity:.6f} @ ${price:.4f}, P&L: ${profit_loss:.2f}")
-                        self.logger.info(f"  持仓已从数据库移除")
+                        trade_info = f"💰 交易执行成功 - {trade_type}"
+                        trade_info += f" | 交易对: {strategy.symbol}"
+                        trade_info += f" | 数量: {quantity:.6f}"
+                        trade_info += f" | 价格: ${price:.4f}"
+                        trade_info += f" | 价值: ${quantity * price:.2f}"
+                        trade_info += f" | 入场价: ${strategy.entry_price:.4f}"
+                        trade_info += f" | 盈亏: ${profit_loss:.2f}"
+                        trade_info += f" | 收益率: {(profit_loss / (strategy.entry_price * quantity)) * 100:+.2f}%"
+                        
+                        self.logger.info(trade_info)
+                        self.logger.info(f"📊 持仓已从数据库移除")
             
             elif action == 'CLOSE':
                 if strategy.position != 0:
@@ -634,7 +758,17 @@ class TradingEngine:
                             profit_loss=profit_loss
                         )
                         
-                        self.logger.info(f"{reason} 平仓 {strategy.symbol}: {quantity:.6f} @ ${price:.4f}, P&L: ${profit_loss:.2f}")
+                        # 详细的平仓交易信息
+                        close_info = f"🔄 {reason} 平仓执行成功"
+                        close_info += f" | 交易对: {strategy.symbol}"
+                        close_info += f" | 数量: {quantity:.6f}"
+                        close_info += f" | 价格: ${price:.4f}"
+                        close_info += f" | 价值: ${quantity * price:.2f}"
+                        close_info += f" | 入场价: ${strategy.entry_price:.4f}"
+                        close_info += f" | 盈亏: ${profit_loss:.2f}"
+                        close_info += f" | 收益率: {(profit_loss / (strategy.entry_price * abs(strategy.position))) * 100:+.2f}%"
+                        
+                        self.logger.info(close_info)
                         
         except Exception as e:
             self.logger.error(f"执行增强交易失败: {e}")

@@ -1,0 +1,13 @@
+{
+  "leverage": 10,
+  "symbols": [
+    "ADAUSDT"
+  ],
+  "enabled_strategies": [
+    "MA",
+    "RSI",
+    "ML",
+    "Chanlun"
+  ],
+  "updated_at": "2025-08-14T02:20:19.502797"
+}

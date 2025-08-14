@@ -70,9 +70,9 @@ backtest_engine = BacktestEngine()
 def index():
     return render_template('index.html')
 
-@app.route('/futures')
-def futures():
-    return render_template('futures.html')
+# @app.route('/futures')
+# def futures():
+#     return render_template('futures.html')
 
 @app.route('/api/account')
 def get_account():

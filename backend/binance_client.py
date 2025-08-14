@@ -253,6 +253,21 @@ class BinanceClient:
             self.logger.error(f"获取价格失败: {e}")
             return None
     
+    def get_position_mode(self):
+        """获取当前持仓模式"""
+        if self.trading_mode != 'FUTURES':
+            return None
+        
+        try:
+            # 获取账户信息
+            account_info = self._safe_api_call(self.client.futures_account)
+            if account_info and 'dualSidePosition' in account_info:
+                return account_info['dualSidePosition']
+            return None
+        except Exception as e:
+            self.logger.error(f"获取持仓模式失败: {e}")
+            return None
+
     def place_order(self, symbol, side, quantity, order_type='MARKET', price=None, 
                    leverage=None, position_side='BOTH', reduce_only=False):
         """下单"""
@@ -274,15 +289,30 @@ class BinanceClient:
                 if leverage:
                     self.set_leverage(symbol, leverage)
                 
+                # 检查持仓模式并调整position_side
+                position_mode = self.get_position_mode()
+                if position_mode is not None:
+                    if not position_mode:  # 单向持仓模式
+                        # 单向持仓模式下，不需要指定positionSide
+                        position_side = None
+                    else:  # 双向持仓模式
+                        # 双向持仓模式下，需要指定LONG或SHORT
+                        if position_side == 'BOTH':
+                            # 根据交易方向确定持仓方向
+                            position_side = 'LONG' if side == 'BUY' else 'SHORT'
+                
                 if order_type == 'MARKET':
                     # 构建订单参数
                     order_params = {
                         'symbol': symbol,
                         'side': side,
                         'type': 'MARKET',
-                        'quantity': f"{quantity:.5f}",
-                        'positionSide': position_side
+                        'quantity': str(quantity)
                     }
+                    
+                    # 只在双向持仓模式下添加positionSide
+                    if position_side and position_side != 'BOTH':
+                        order_params['positionSide'] = position_side
                     
                     # 只在需要时添加reduceOnly参数
                     if reduce_only:
@@ -295,11 +325,14 @@ class BinanceClient:
                         'symbol': symbol,
                         'side': side,
                         'type': 'LIMIT',
-                        'quantity': f"{quantity:.5f}",
+                        'quantity': str(quantity),
                         'price': price,
-                        'positionSide': position_side,
                         'timeInForce': 'GTC'
                     }
+                    
+                    # 只在双向持仓模式下添加positionSide
+                    if position_side and position_side != 'BOTH':
+                        order_params['positionSide'] = position_side
                     
                     # 只在需要时添加reduceOnly参数
                     if reduce_only:
@@ -313,15 +346,15 @@ class BinanceClient:
                         self.client.order_market,
                         symbol=symbol,
                         side=side,
-                        quantity=quantity
+                        quantity=str(quantity)
                     )
                 else:
                     order = self._safe_api_call(
                         self.client.order_limit,
                         symbol=symbol,
                         side=side,
-                        quantity=quantity,
-                        price=price
+                        quantity=str(quantity),
+                        price=str(price) if price else None
                     )
             
             if order:
@@ -372,20 +405,40 @@ class BinanceClient:
                 if f['filterType'] == 'LOT_SIZE':
                     step_size = float(f['stepSize'])
                     min_qty = float(f['minQty'])
+                    max_qty = float(f.get('maxQty', float('inf')))
                     
-                    # 确保数量不小于最小值
+                    # 确保数量在有效范围内
                     if quantity < min_qty:
                         quantity = min_qty
+                    elif quantity > max_qty:
+                        quantity = max_qty
                     
-                    # 简化的精度调整：直接使用步长的倍数
-                    # 计算最接近的步长倍数
-                    steps = round((quantity - min_qty) / step_size)
-                    adjusted_quantity = min_qty + steps * step_size
+                    # 计算步长精度
+                    step_precision = self._get_step_precision(step_size)
                     
-                    # 对于BTCUSDT，步长是0.00001，所以精度是5位小数
-                    adjusted_quantity = round(adjusted_quantity, 5)
+                    # 使用更简单和可靠的方法：直接计算步长倍数并格式化
+                    steps = int(quantity / step_size)
+                    adjusted_quantity = steps * step_size
                     
-                    self.logger.info(f"数量精度调整: {quantity:.8f} -> {adjusted_quantity:.8f}")
+                    # 确保不小于最小值
+                    if adjusted_quantity < min_qty:
+                        adjusted_quantity = min_qty
+                    
+                    # 使用字符串格式化确保完全正确的精度
+                    adjusted_quantity = float(f"{adjusted_quantity:.{step_precision}f}")
+                    
+                    # 最终验证：确保数量是步长的整数倍
+                    final_steps = int(round(adjusted_quantity / step_size))
+                    adjusted_quantity = final_steps * step_size
+                    
+                    # 最终格式化到正确精度
+                    adjusted_quantity = float(f"{adjusted_quantity:.{step_precision}f}")
+                    
+                    # 最终验证：确保数量完全正确
+                    final_steps_int = int(round(adjusted_quantity / step_size))
+                    adjusted_quantity = final_steps_int * step_size
+                    
+                    self.logger.info(f"数量精度调整: {quantity:.8f} -> {adjusted_quantity:.8f} (步长: {step_size}, 精度: {step_precision})")
                     return adjusted_quantity
             
             # 如果没有找到过滤器，使用默认精度
@@ -394,6 +447,20 @@ class BinanceClient:
         except Exception as e:
             self.logger.error(f"调整数量精度失败: {e}")
             return round(quantity, 6)
+    
+    def _get_step_precision(self, step_size):
+        """根据步长计算精度位数"""
+        if step_size >= 1:
+            return 0
+        else:
+            # 使用格式化字符串避免科学计数法
+            step_str = f"{step_size:.10f}".rstrip('0').rstrip('.')
+            if '.' in step_str:
+                # 计算小数位数
+                decimal_part = step_str.split('.')[-1]
+                return len(decimal_part)
+            else:
+                return 0
     
     def _adjust_price_precision(self, price, symbol_info):
         """调整价格精度"""

@@ -261,8 +261,8 @@ class MLStrategy(BaseStrategy):
                 self.logger.warning("特征准备后数据为空")
                 return False
             
-            self.logger.info(f"特征数据形状: {feature_data.shape}")
-            self.logger.info(f"特征数据类型: {feature_data.dtypes}")
+            # self.logger.info(f"特征数据形状: {feature_data.shape}")
+            # self.logger.info(f"特征数据类型: {feature_data.dtypes}")
                 
             labels = self.create_labels(feature_data)
             

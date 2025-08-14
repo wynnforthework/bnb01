@@ -170,6 +170,10 @@ backtest_engine = BacktestEngine()
 def index():
     return render_template('index.html')
 
+@app.route('/debug-futures')
+def debug_futures():
+    return send_file('test_futures_debug.html', mimetype='text/html')
+
 
 
 @app.route('/test-symbols')
