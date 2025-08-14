@@ -53,11 +53,119 @@ class RiskManager:
         # 相关性阈值
         self.max_correlation = 0.8      # 最大相关性0.8
         
+    def check_available_balance(self, symbol: str, quantity: float, price: float) -> bool:
+        """检查可用余额是否足够"""
+        try:
+            # 获取可用USDT余额
+            available_balance = self.binance_client.get_balance('USDT')
+            
+            # 计算需要的USDT金额
+            required_amount = quantity * price
+            
+            # 检查余额是否足够
+            if required_amount > available_balance:
+                self.logger.warning(f"余额不足: 需要${required_amount:.2f}, 可用${available_balance:.2f}")
+                return False
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"检查余额失败: {e}")
+            return False
+
+    def adjust_position_for_balance(self, symbol: str, suggested_quantity: float, 
+                                   price: float) -> float:
+        """根据可用余额调整仓位大小"""
+        try:
+            # 获取可用USDT余额
+            available_balance = self.binance_client.get_balance('USDT')
+            
+            # 计算最大可买数量
+            max_quantity = available_balance / price
+            
+            # 如果建议数量超过最大可买数量，进行调整
+            if suggested_quantity > max_quantity:
+                adjusted_quantity = max_quantity * 0.8  # 使用80%的可用余额
+                self.logger.info(f"调整仓位大小: {suggested_quantity:.6f} -> {adjusted_quantity:.6f}")
+                return adjusted_quantity
+            
+            return suggested_quantity
+            
+        except Exception as e:
+            self.logger.error(f"调整仓位失败: {e}")
+            return 0.0
+
+    def check_existing_position(self, symbol: str) -> float:
+        """检查现有持仓"""
+        try:
+            # 获取账户信息
+            account_info = self.binance_client.get_account_info()
+            
+            if account_info:
+                # 提取币种（去掉USDT后缀）
+                asset = symbol.replace('USDT', '')
+                
+                for balance in account_info['balances']:
+                    if balance['asset'] == asset:
+                        existing_quantity = float(balance['free']) + float(balance['locked'])
+                        self.logger.info(f"现有{asset}持仓: {existing_quantity:.6f}")
+                        return existing_quantity
+            
+            return 0.0
+            
+        except Exception as e:
+            self.logger.error(f"检查现有持仓失败: {e}")
+            return 0.0
+
+    def should_reduce_position(self, symbol: str, existing_quantity: float, 
+                              current_price: float) -> Tuple[bool, float]:
+        """判断是否需要减仓"""
+        try:
+            # 计算现有持仓价值
+            position_value = existing_quantity * current_price
+            
+            # 获取总资产价值
+            portfolio_value = self._get_portfolio_value()
+            
+            # 计算持仓权重
+            position_weight = position_value / portfolio_value if portfolio_value > 0 else 0
+            
+            # 如果持仓权重超过最大限制，建议减仓
+            if position_weight > self.max_position_weight:
+                # 计算需要减仓的数量
+                target_value = portfolio_value * self.max_position_weight
+                target_quantity = target_value / current_price
+                reduce_quantity = existing_quantity - target_quantity
+                
+                self.logger.info(f"{symbol} 持仓权重过高 {position_weight:.1%}，建议减仓 {reduce_quantity:.6f}")
+                return True, reduce_quantity
+            
+            return False, 0.0
+            
+        except Exception as e:
+            self.logger.error(f"判断减仓失败: {e}")
+            return False, 0.0
+
     def calculate_position_size(self, symbol: str, signal_strength: float, 
                               current_price: float, portfolio_value: float,
                               volatility: float = None) -> float:
-        """计算仓位大小"""
+        """计算仓位大小（添加余额检查）"""
         try:
+            # 检查现有持仓
+            existing_position = self.check_existing_position(symbol)
+            
+            # 如果已有持仓，考虑是否需要减仓
+            if existing_position > 0:
+                should_reduce, reduce_quantity = self.should_reduce_position(
+                    symbol, existing_position, current_price
+                )
+                if should_reduce:
+                    self.logger.info(f"{symbol} 建议减仓 {reduce_quantity:.6f}")
+                    # 返回0表示不建新仓，而是应该先减仓
+                    return 0.0
+                else:
+                    self.logger.info(f"{symbol} 已有持仓 {existing_position:.6f}，持仓合理")
+            
             # 获取资产波动率
             if volatility is None:
                 volatility = self._calculate_volatility(symbol)
@@ -106,11 +214,21 @@ class RiskManager:
             
             # 转换为实际数量
             position_value = portfolio_value * final_weight
-            position_size = position_value / current_price
+            suggested_quantity = position_value / current_price
             
-            self.logger.info(f"计算仓位 {symbol}: 权重={final_weight:.2%}, 数量={position_size:.6f}")
+            # 根据余额调整仓位
+            adjusted_quantity = self.adjust_position_for_balance(
+                symbol, suggested_quantity, current_price
+            )
             
-            return position_size
+            # 检查余额是否足够
+            if not self.check_available_balance(symbol, adjusted_quantity, current_price):
+                self.logger.warning(f"{symbol} 余额不足，无法建仓")
+                return 0.0
+            
+            self.logger.info(f"计算仓位 {symbol}: 权重={final_weight:.2%}, 数量={adjusted_quantity:.6f}")
+            
+            return adjusted_quantity
             
         except Exception as e:
             self.logger.error(f"计算仓位大小失败: {e}")

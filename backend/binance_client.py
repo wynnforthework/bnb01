@@ -1,3 +1,6 @@
+import json
+import os
+from decimal import Decimal, getcontext
 from binance.client import Client
 from binance.exceptions import BinanceAPIException
 import pandas as pd
@@ -59,6 +62,11 @@ class BinanceClient:
         
         self.logger = logging.getLogger(__name__)
         self.logger.info(f"币安客户端初始化完成，交易模式: {self.trading_mode}")
+        
+        # 缓存exchange info
+        self._exchange_info_cache = None
+        self._exchange_info_cache_time = 0
+        self._cache_duration = 3600  # 1小时缓存
         
         # 验证API连接
         self._verify_connection()
@@ -275,7 +283,7 @@ class BinanceClient:
             # 获取交易对信息以确定精度
             symbol_info = self._get_symbol_info(symbol)
             if symbol_info:
-                # 调整数量精度
+                # 调整数量精度 - 这会自动确保数量符合LOT_SIZE要求
                 quantity = self._adjust_quantity_precision(quantity, symbol_info)
                 
                 # 调整价格精度（如果是限价单）
@@ -362,26 +370,111 @@ class BinanceClient:
             return order
             
         except BinanceAPIException as e:
-            self.logger.error(f"下单失败: {e}")
+            error_msg = str(e)
+            if "Filter failure: LOT_SIZE" in error_msg:
+                self.logger.error(f"LOT_SIZE过滤器失败 - 数量不符合步长要求: {quantity}")
+                # 尝试自动调整数量
+                if symbol_info:
+                    adjusted_quantity = self._adjust_quantity_precision(quantity, symbol_info)
+                    self.logger.info(f"建议调整后的数量: {adjusted_quantity}")
+            else:
+                self.logger.error(f"下单失败: {e}")
             return None
         except Exception as e:
             self.logger.error(f"下单异常: {e}")
             return None
     
     def get_exchange_info(self):
-        """获取交易所信息"""
+        """获取交易所信息 - 优先从本地文件读取"""
         try:
-            # 使用正确的API方法名称
+            # 首先尝试从本地JSON文件读取
+            local_file_path = 'exchangeInfo.json'
+            if os.path.exists(local_file_path):
+                try:
+                    with open(local_file_path, 'r', encoding='utf-8') as f:
+                        exchange_info = json.load(f)
+                    self.logger.info("从本地文件读取交易所信息成功")
+                    return exchange_info
+                except Exception as e:
+                    self.logger.warning(f"读取本地交易所信息失败: {e}")
+            
+            # 如果本地文件不存在或读取失败，使用API获取
+            if self._exchange_info_cache and (time.time() - self._exchange_info_cache_time) < self._cache_duration:
+                self.logger.info("使用缓存的交易所信息")
+                return self._exchange_info_cache
+            
+            # 从API获取
             if hasattr(self.client, 'get_exchange_info'):
-                return self.client.get_exchange_info()
+                exchange_info = self.client.get_exchange_info()
             elif hasattr(self.client, 'get_exchange_information'):
-                return self.client.get_exchange_information()
+                exchange_info = self.client.get_exchange_information()
             else:
-                # 如果都不存在，尝试直接获取
-                return self.client.get_exchange_info()
+                exchange_info = self.client.get_exchange_info()
+            
+            # 缓存结果
+            self._exchange_info_cache = exchange_info
+            self._exchange_info_cache_time = time.time()
+            
+            self.logger.info("从API获取交易所信息成功")
+            return exchange_info
+            
         except Exception as e:
             self.logger.error(f"获取交易所信息失败: {e}")
             return None
+
+    def get_round_count(self, symbol):
+        """获取交易对的数量精度位数 - 基于LOT_SIZE的stepSize"""
+        try:
+            exchange_info = self.get_exchange_info()
+            if not exchange_info or 'symbols' not in exchange_info:
+                return 6  # 默认精度
+            
+            for symbol_info in exchange_info['symbols']:
+                if symbol_info['symbol'] == symbol:
+                    filters = symbol_info['filters']
+                    for filter_info in filters:
+                        if filter_info['filterType'] == 'LOT_SIZE':
+                            step_size = filter_info['stepSize']
+                            # 计算小数位数
+                            step_str = str(step_size)
+                            if '.' in step_str:
+                                decimal_part = step_str.split('.')[-1]
+                                return len(decimal_part)
+                            else:
+                                return 0
+            
+            return 6  # 默认精度
+            
+        except Exception as e:
+            self.logger.error(f"获取数量精度位数失败: {e}")
+            return 6
+
+    def get_price_precision(self, symbol):
+        """获取交易对的价格精度位数 - 基于PRICE_FILTER的tickSize"""
+        try:
+            exchange_info = self.get_exchange_info()
+            if not exchange_info or 'symbols' not in exchange_info:
+                return 2  # 默认精度
+            
+            for symbol_info in exchange_info['symbols']:
+                if symbol_info['symbol'] == symbol:
+                    filters = symbol_info['filters']
+                    for filter_info in filters:
+                        if filter_info['filterType'] == 'PRICE_FILTER':
+                            tick_size = filter_info['tickSize']
+                            # 计算小数位数
+                            tick_str = str(tick_size)
+                            if '.' in tick_str:
+                                decimal_part = tick_str.split('.')[-1]
+                                return len(decimal_part)
+                            else:
+                                return 0
+            
+            return 2  # 默认精度
+            
+        except Exception as e:
+            self.logger.error(f"获取价格精度位数失败: {e}")
+            return 2
 
     def _get_symbol_info(self, symbol):
         """获取交易对信息"""
@@ -398,7 +491,7 @@ class BinanceClient:
             return None
     
     def _adjust_quantity_precision(self, quantity, symbol_info):
-        """调整数量精度"""
+        """调整数量精度 - 确保符合LOT_SIZE过滤器要求"""
         try:
             # 获取LOT_SIZE过滤器
             for f in symbol_info['filters']:
@@ -413,33 +506,38 @@ class BinanceClient:
                     elif quantity > max_qty:
                         quantity = max_qty
                     
-                    # 计算步长精度
+                    # 计算步长精度位数
                     step_precision = self._get_step_precision(step_size)
                     
-                    # 使用更简单和可靠的方法：直接计算步长倍数并格式化
-                    steps = int(quantity / step_size)
-                    adjusted_quantity = steps * step_size
+                    # 将数量调整到最接近的有效步长
+                    # 使用Decimal进行精确计算
+                    from decimal import Decimal, ROUND_DOWN
+                    
+                    # 将step_size转换为Decimal以确保精度
+                    step_decimal = Decimal(str(step_size))
+                    quantity_decimal = Decimal(str(quantity))
+                    
+                    # 计算有多少个完整的步长
+                    steps = quantity_decimal / step_decimal
+                    # 向下取整到最近的步长
+                    valid_steps = steps.quantize(Decimal('1'), rounding=ROUND_DOWN)
+                    # 计算有效的数量
+                    adjusted_quantity = valid_steps * step_decimal
                     
                     # 确保不小于最小值
-                    if adjusted_quantity < min_qty:
-                        adjusted_quantity = min_qty
+                    min_qty_decimal = Decimal(str(min_qty))
+                    if adjusted_quantity < min_qty_decimal:
+                        adjusted_quantity = min_qty_decimal
                     
-                    # 使用字符串格式化确保完全正确的精度
-                    adjusted_quantity = float(f"{adjusted_quantity:.{step_precision}f}")
+                    # 转换为float并格式化到正确精度
+                    result_quantity = float(adjusted_quantity)
                     
-                    # 最终验证：确保数量是步长的整数倍
-                    final_steps = int(round(adjusted_quantity / step_size))
-                    adjusted_quantity = final_steps * step_size
+                    # 使用字符串格式化确保精度正确
+                    precise_quantity_str = "{:0.0{}f}".format(result_quantity, step_precision)
+                    final_quantity = float(precise_quantity_str)
                     
-                    # 最终格式化到正确精度
-                    adjusted_quantity = float(f"{adjusted_quantity:.{step_precision}f}")
-                    
-                    # 最终验证：确保数量完全正确
-                    final_steps_int = int(round(adjusted_quantity / step_size))
-                    adjusted_quantity = final_steps_int * step_size
-                    
-                    self.logger.info(f"数量精度调整: {quantity:.8f} -> {adjusted_quantity:.8f} (步长: {step_size}, 精度: {step_precision})")
-                    return adjusted_quantity
+                    self.logger.info(f"数量精度调整: {quantity:.8f} -> {final_quantity:.8f} (步长: {step_size}, 精度: {step_precision})")
+                    return final_quantity
             
             # 如果没有找到过滤器，使用默认精度
             return round(quantity, 6)
@@ -449,41 +547,85 @@ class BinanceClient:
             return round(quantity, 6)
     
     def _get_step_precision(self, step_size):
-        """根据步长计算精度位数"""
-        if step_size >= 1:
-            return 0
-        else:
-            # 使用格式化字符串避免科学计数法
-            step_str = f"{step_size:.10f}".rstrip('0').rstrip('.')
+        """根据步长计算精度位数 - 正确处理科学计数法"""
+        try:
+            # 使用Decimal来处理科学计数法
+            from decimal import Decimal
+            step_decimal = Decimal(str(step_size))
+            
+            # 转换为字符串，避免科学计数法
+            step_str = f"{step_decimal:.10f}"
+            
+            # 移除尾部的0和小数点
+            step_str = step_str.rstrip('0').rstrip('.')
+            
             if '.' in step_str:
                 # 计算小数位数
                 decimal_part = step_str.split('.')[-1]
                 return len(decimal_part)
             else:
                 return 0
+        except Exception as e:
+            self.logger.error(f"计算步长精度失败: {e}")
+            return 6  # 默认精度
+    
+    def _validate_quantity(self, quantity, symbol_info):
+        """验证数量是否符合LOT_SIZE过滤器要求"""
+        try:
+            for f in symbol_info['filters']:
+                if f['filterType'] == 'LOT_SIZE':
+                    step_size = float(f['stepSize'])
+                    min_qty = float(f['minQty'])
+                    max_qty = float(f.get('maxQty', float('inf')))
+                    
+                    # 检查数量范围
+                    if quantity < min_qty:
+                        return {
+                            'valid': False,
+                            'message': f"数量 {quantity} 小于最小值 {min_qty}"
+                        }
+                    
+                    if quantity > max_qty:
+                        return {
+                            'valid': False,
+                            'message': f"数量 {quantity} 大于最大值 {max_qty}"
+                        }
+                    
+                    # 检查是否符合步长要求
+                    from decimal import Decimal
+                    step_decimal = Decimal(str(step_size))
+                    quantity_decimal = Decimal(str(quantity))
+                    
+                    # 计算余数
+                    remainder = quantity_decimal % step_decimal
+                    
+                    if remainder != 0:
+                        return {
+                            'valid': False,
+                            'message': f"数量 {quantity} 不符合步长 {step_size} 的要求，余数: {remainder}"
+                        }
+                    
+                    return {'valid': True, 'message': '数量验证通过'}
+            
+            # 如果没有找到LOT_SIZE过滤器，认为有效
+            return {'valid': True, 'message': '未找到LOT_SIZE过滤器'}
+            
+        except Exception as e:
+            self.logger.error(f"数量验证失败: {e}")
+            return {'valid': False, 'message': f'验证过程出错: {e}'}
     
     def _adjust_price_precision(self, price, symbol_info):
-        """调整价格精度"""
+        """调整价格精度 - 使用PRICE_FILTER的tickSize"""
         try:
-            # 获取PRICE_FILTER过滤器
-            for f in symbol_info['filters']:
-                if f['filterType'] == 'PRICE_FILTER':
-                    tick_size = float(f['tickSize'])
-                    
-                    # 计算精度位数
-                    if tick_size >= 1:
-                        precision = 0
-                    else:
-                        precision = len(str(tick_size).split('.')[-1].rstrip('0'))
-                    
-                    # 调整价格
-                    adjusted_price = round(price, precision)
-                    
-                    self.logger.info(f"价格精度调整: {price:.8f} -> {adjusted_price:.8f}")
-                    return adjusted_price
+            # 获取价格精度位数
+            precision = self.get_price_precision(symbol_info['symbol'])
             
-            # 如果没有找到过滤器，使用默认精度
-            return round(price, 2)
+            # 使用字符串格式化确保精度正确
+            precise_price_str = "{:0.0{}f}".format(price, precision)
+            formatted_price = float(precise_price_str)
+            
+            self.logger.info(f"价格精度调整: {price:.8f} -> {formatted_price:.8f} (精度: {precision})")
+            return formatted_price
             
         except Exception as e:
             self.logger.error(f"调整价格精度失败: {e}")
