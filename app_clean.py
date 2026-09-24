@@ -204,17 +204,25 @@ def get_futures_positions():
         positions_data = []
         
         for pos in positions:
+            # 跳过空持仓，避免缺少 marginType/entryPrice 等字段导致 KeyError
+            try:
+                position_amt = float(pos.get('positionAmt', 0))
+            except (TypeError, ValueError):
+                continue
+            if position_amt == 0:
+                continue
+
             # Calculate percentage if not provided by API
             percentage = 0
-            if 'percentage' in pos:
+            if pos.get('percentage') is not None:
                 percentage = float(pos['percentage'])
             else:
                 # Calculate percentage based on entry price and mark price
-                entry_price = float(pos['entryPrice'])
-                mark_price = float(pos['markPrice'])
+                entry_price = float(pos.get('entryPrice', 0))
+                mark_price = float(pos.get('markPrice', 0))
                 if entry_price > 0:
                     percentage = ((mark_price - entry_price) / entry_price) * 100
-                    if float(pos['positionAmt']) < 0:  # Short position
+                    if position_amt < 0:  # Short position
                         percentage = -percentage
             
             positions_data.append({
